@@ -1,4 +1,4 @@
-package json
+package jsoncolor
 
 import (
 	"encoding"
@@ -12,8 +12,6 @@ import (
 	"time"
 	"unicode"
 	"unsafe"
-
-	"github.com/neilotoole/sq/cli/output/jsonw/internal"
 )
 
 type codec struct {
@@ -23,7 +21,7 @@ type codec struct {
 
 type encoder struct {
 	flags    AppendFlags
-	clrs     internal.Colors
+	clrs     Colors
 	indenter *Indenter
 }
 type decoder struct{ flags ParseFlags }

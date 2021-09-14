@@ -1,4 +1,4 @@
-package json
+package jsoncolor
 
 import (
 	"bytes"
@@ -19,8 +19,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/neilotoole/sq/cli/output/jsonw/internal"
 )
 
 // The encoding/json package does not export the msg field of json.SyntaxError,
@@ -65,7 +63,7 @@ func TestMain(m *testing.M) {
 		}
 
 		marshal = func(b []byte, v interface{}) ([]byte, error) {
-			return Append(b, v, flags, internal.Colors{}, nil)
+			return Append(b, v, flags, Colors{}, nil)
 		}
 
 		unmarshal = func(b []byte, v interface{}) error {

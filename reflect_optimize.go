@@ -1,6 +1,6 @@
 // +build !go1.15
 
-package json
+package jsoncolor
 
 import (
 	"reflect"

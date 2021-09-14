@@ -1,4 +1,4 @@
-package json
+package jsoncolor
 
 import (
 	"bytes"

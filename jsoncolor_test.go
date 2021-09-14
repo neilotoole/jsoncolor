@@ -6,13 +6,9 @@ import (
 	"testing"
 
 	"github.com/neilotoole/jsoncolor"
-	"github.com/neilotoole/sq/cli/output"
-
 	"github.com/stretchr/testify/require"
 
 	stdjson "encoding/json"
-
-	jcolorenc "github.com/neilotoole/jsoncolor/jcolorenc"
 )
 
 // Encoder encapsulates the methods of a JSON encoder.
@@ -22,7 +18,7 @@ type Encoder interface {
 	SetIndent(prefix, indent string)
 }
 
-var _ Encoder = (*jcolorenc.Encoder)(nil)
+var _ Encoder = (*jsoncolor.Encoder)(nil)
 
 func TestEncode(t *testing.T) {
 	testCases := []struct {
@@ -53,20 +49,14 @@ func TestEncode(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			//fm := output.NewFormatting()
-			//fm.Pretty = tc.pretty
-			//fm.EnableColor(tc.color)
-
 			colors := jsoncolor.NewDefaultColors()
 
 			buf := &bytes.Buffer{}
-			enc := jcolorenc.NewEncoder(buf)
+			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(tc.sortMap)
 			enc.SetColors(colors)
-			enc.SetIndent("", "  ")
-
-			if fm.Pretty {
+			if tc.pretty {
 				enc.SetIndent("", "  ")
 			}
 
@@ -96,15 +86,11 @@ func TestEncode_Slice(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			fm := output.NewFormatting()
-			fm.Pretty = tc.pretty
-			fm.EnableColor(tc.color)
-
 			buf := &bytes.Buffer{}
-			enc := jcolorenc.NewEncoder(buf)
+			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
-			enc.SetColors(internal.NewColors(fm))
-			if fm.Pretty {
+			enc.SetColors(jsoncolor.NewDefaultColors())
+			if tc.pretty {
 				enc.SetIndent("", "  ")
 			}
 
@@ -140,18 +126,13 @@ func TestEncode_SmallStruct(t *testing.T) {
 		tc := tc
 
 		t.Run(fmt.Sprintf("pretty_%v__color_%v", tc.pretty, tc.color), func(t *testing.T) {
-			fm := output.NewFormatting()
-			fm.Pretty = tc.pretty
-			fm.EnableColor(tc.color)
-
 			buf := &bytes.Buffer{}
-			enc := jcolorenc.NewEncoder(buf)
+			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(true)
 			colors := jsoncolor.NewDefaultColors()
 			enc.SetColors(colors)
-
-			if fm.Pretty {
+			if tc.pretty {
 				enc.SetIndent("", "  ")
 			}
 
@@ -190,17 +171,12 @@ func TestEncode_Map_Nested(t *testing.T) {
 		tc := tc
 
 		t.Run(fmt.Sprintf("pretty_%v__color_%v", tc.pretty, tc.color), func(t *testing.T) {
-			fm := output.NewFormatting()
-			fm.Pretty = tc.pretty
-			fm.EnableColor(tc.color)
-
 			buf := &bytes.Buffer{}
-			enc := jcolorenc.NewEncoder(buf)
+			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(true)
-			enc.SetColors(internal.NewColors(fm))
-
-			if fm.Pretty {
+			enc.SetColors(jsoncolor.NewDefaultColors())
+			if tc.pretty {
 				enc.SetIndent("", "  ")
 			}
 
@@ -237,17 +213,13 @@ func TestEncode_Map_StringNotInterface(t *testing.T) {
 		tc := tc
 
 		t.Run(fmt.Sprintf("size_%d__pretty_%v__color_%v", len(tc.v), tc.pretty, tc.color), func(t *testing.T) {
-			fm := output.NewFormatting()
-			fm.Pretty = tc.pretty
-			fm.EnableColor(tc.color)
-
 			buf := &bytes.Buffer{}
-			enc := jcolorenc.NewEncoder(buf)
+			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(tc.sortMap)
-			enc.SetColors(internal.NewColors(fm))
-			if fm.Pretty {
-				enc.SetIndent("", fm.Indent)
+			enc.SetColors(jsoncolor.NewDefaultColors())
+			if tc.pretty {
+				enc.SetIndent("", "  ")
 			}
 
 			require.NoError(t, enc.Encode(tc.v))
@@ -260,10 +232,10 @@ func TestEncode_Map_StringNotInterface(t *testing.T) {
 func TestEncode_RawMessage(t *testing.T) {
 	type RawStruct struct {
 		FString string               `json:"f_string"`
-		FRaw    jcolorenc.RawMessage `json:"f_raw"`
+		FRaw    jsoncolor.RawMessage `json:"f_raw"`
 	}
 
-	raw := jcolorenc.RawMessage(`{"one":1,"two":2}`)
+	raw := jsoncolor.RawMessage(`{"one":1,"two":2}`)
 
 	testCases := []struct {
 		name   string
@@ -272,7 +244,7 @@ func TestEncode_RawMessage(t *testing.T) {
 		v      interface{}
 		want   string
 	}{
-		{name: "empty", pretty: false, v: jcolorenc.RawMessage(`{}`), want: "{}\n"},
+		{name: "empty", pretty: false, v: jsoncolor.RawMessage(`{}`), want: "{}\n"},
 		{name: "no_pretty", pretty: false, v: raw, want: "{\"one\":1,\"two\":2}\n"},
 		{name: "pretty", pretty: true, v: raw, want: "{\n  \"one\": 1,\n  \"two\": 2\n}\n"},
 		{name: "pretty_struct", pretty: true, v: RawStruct{FString: "hello", FRaw: raw}, want: "{\n  \"f_string\": \"hello\",\n  \"f_raw\": {\n    \"one\": 1,\n    \"two\": 2\n  }\n}\n"},
@@ -282,17 +254,13 @@ func TestEncode_RawMessage(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			fm := output.NewFormatting()
-			fm.Pretty = tc.pretty
-			fm.EnableColor(tc.color)
-
 			buf := &bytes.Buffer{}
-			enc := jcolorenc.NewEncoder(buf)
+			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(true)
-			enc.SetColors(internal.NewColors(fm))
-			if fm.Pretty {
-				enc.SetIndent("", fm.Indent)
+			enc.SetColors(jsoncolor.NewDefaultColors())
+			if tc.pretty {
+				enc.SetIndent("", "  ")
 			}
 
 			err := enc.Encode(tc.v)
@@ -307,22 +275,22 @@ func TestEncode_RawMessage(t *testing.T) {
 // This test is necessary because the encoder has a fast path
 // for map[string]interface{}
 func TestEncode_Map_StringRawMessage(t *testing.T) {
-	raw := jcolorenc.RawMessage(`{"one":1,"two":2}`)
+	raw := jsoncolor.RawMessage(`{"one":1,"two":2}`)
 
 	testCases := []struct {
 		pretty  bool
 		color   bool
 		sortMap bool
-		v       map[string]jcolorenc.RawMessage
+		v       map[string]jsoncolor.RawMessage
 		want    string
 	}{
-		{pretty: false, sortMap: true, v: map[string]jcolorenc.RawMessage{}, want: "{}\n"},
-		{pretty: false, sortMap: false, v: map[string]jcolorenc.RawMessage{}, want: "{}\n"},
-		{pretty: true, sortMap: true, v: map[string]jcolorenc.RawMessage{}, want: "{}\n"},
-		{pretty: true, sortMap: false, v: map[string]jcolorenc.RawMessage{}, want: "{}\n"},
-		{pretty: false, sortMap: true, v: map[string]jcolorenc.RawMessage{"msg1": raw, "msg2": raw}, want: "{\"msg1\":{\"one\":1,\"two\":2},\"msg2\":{\"one\":1,\"two\":2}}\n"},
-		{pretty: true, sortMap: true, v: map[string]jcolorenc.RawMessage{"msg1": raw, "msg2": raw}, want: "{\n  \"msg1\": {\n    \"one\": 1,\n    \"two\": 2\n  },\n  \"msg2\": {\n    \"one\": 1,\n    \"two\": 2\n  }\n}\n"},
-		{pretty: true, sortMap: false, v: map[string]jcolorenc.RawMessage{"msg1": raw}, want: "{\n  \"msg1\": {\n    \"one\": 1,\n    \"two\": 2\n  }\n}\n"},
+		{pretty: false, sortMap: true, v: map[string]jsoncolor.RawMessage{}, want: "{}\n"},
+		{pretty: false, sortMap: false, v: map[string]jsoncolor.RawMessage{}, want: "{}\n"},
+		{pretty: true, sortMap: true, v: map[string]jsoncolor.RawMessage{}, want: "{}\n"},
+		{pretty: true, sortMap: false, v: map[string]jsoncolor.RawMessage{}, want: "{}\n"},
+		{pretty: false, sortMap: true, v: map[string]jsoncolor.RawMessage{"msg1": raw, "msg2": raw}, want: "{\"msg1\":{\"one\":1,\"two\":2},\"msg2\":{\"one\":1,\"two\":2}}\n"},
+		{pretty: true, sortMap: true, v: map[string]jsoncolor.RawMessage{"msg1": raw, "msg2": raw}, want: "{\n  \"msg1\": {\n    \"one\": 1,\n    \"two\": 2\n  },\n  \"msg2\": {\n    \"one\": 1,\n    \"two\": 2\n  }\n}\n"},
+		{pretty: true, sortMap: false, v: map[string]jsoncolor.RawMessage{"msg1": raw}, want: "{\n  \"msg1\": {\n    \"one\": 1,\n    \"two\": 2\n  }\n}\n"},
 	}
 
 	for _, tc := range testCases {
@@ -330,17 +298,14 @@ func TestEncode_Map_StringRawMessage(t *testing.T) {
 
 		name := fmt.Sprintf("size_%d__pretty_%v__color_%v__sort_%v", len(tc.v), tc.pretty, tc.color, tc.sortMap)
 		t.Run(name, func(t *testing.T) {
-			fm := output.NewFormatting()
-			fm.Pretty = tc.pretty
-			fm.EnableColor(tc.color)
 
 			buf := &bytes.Buffer{}
-			enc := jcolorenc.NewEncoder(buf)
+			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(tc.sortMap)
-			enc.SetColors(internal.NewColors(fm))
-			if fm.Pretty {
-				enc.SetIndent("", fm.Indent)
+			enc.SetColors(jsoncolor.NewDefaultColors())
+			if tc.pretty {
+				enc.SetIndent("", "  ")
 			}
 
 			require.NoError(t, enc.Encode(tc.v))
@@ -366,17 +331,13 @@ func TestEncode_BigStruct(t *testing.T) {
 		tc := tc
 
 		t.Run(fmt.Sprintf("pretty_%v__color_%v", tc.pretty, tc.color), func(t *testing.T) {
-			fm := output.NewFormatting()
-			fm.Pretty = tc.pretty
-			fm.EnableColor(tc.color)
 
 			buf := &bytes.Buffer{}
-			enc := jcolorenc.NewEncoder(buf)
+			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(true)
-			enc.SetColors(internal.NewColors(fm))
-
-			if fm.Pretty {
+			enc.SetColors(jsoncolor.NewDefaultColors())
+			if tc.pretty {
 				enc.SetIndent("", "  ")
 			}
 
@@ -392,21 +353,14 @@ func TestEncode_BigStruct(t *testing.T) {
 // has a fast path).
 //
 // NOTE: Currently the encoder is broken wrt colors enabled
-//  for non-string map keys. It's possible we don't actually need
-//  to address this for sq purposes.
+//  for non-string map keys.
 func TestEncode_Map_Not_StringInterface(t *testing.T) {
-	fm := output.NewFormatting()
-	fm.Pretty = true
-	fm.EnableColor(true)
-
 	buf := &bytes.Buffer{}
-	enc := jcolorenc.NewEncoder(buf)
+	enc := jsoncolor.NewEncoder(buf)
 	enc.SetEscapeHTML(false)
 	enc.SetSortMapKeys(true)
-	enc.SetColors(internal.NewColors(fm))
-	if fm.Pretty {
-		enc.SetIndent("", "  ")
-	}
+	enc.SetColors(jsoncolor.NewDefaultColors())
+	enc.SetIndent("", "  ")
 
 	v := map[int32]string{
 		0: "zero",

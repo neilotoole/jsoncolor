@@ -8,7 +8,7 @@
 // We benchmark converting between the JSON form
 // and in-memory data structures.
 
-package json
+package jsoncolor
 
 import (
 	"bytes"
@@ -21,6 +21,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/rogpeppe/go-internal/testenv"
 )
 
 type codeResponse struct {

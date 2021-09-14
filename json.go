@@ -1,4 +1,4 @@
-package json
+package jsoncolor
 
 import (
 	"bytes"
@@ -8,8 +8,6 @@ import (
 	"runtime"
 	"sync"
 	"unsafe"
-
-	"github.com/neilotoole/sq/cli/output/jsonw/internal"
 )
 
 // Delim is documented at https://golang.org/pkg/encoding/json/#Delim
@@ -122,7 +120,7 @@ const (
 
 // Append acts like Marshal but appends the json representation to b instead of
 // always reallocating a new slice.
-func Append(b []byte, x interface{}, flags AppendFlags, clrs internal.Colors, indenter *Indenter) ([]byte, error) {
+func Append(b []byte, x interface{}, flags AppendFlags, clrs Colors, indenter *Indenter) ([]byte, error) {
 	if x == nil {
 		// Special case for nil values because it makes the rest of the code
 		// simpler to assume that it won't be seeing nil pointers.
@@ -164,7 +162,7 @@ func Marshal(x interface{}) ([]byte, error) {
 	var err error
 	var buf = encoderBufferPool.Get().(*encoderBuffer)
 
-	if buf.data, err = Append(buf.data[:0], x, EscapeHTML|SortMapKeys, internal.Colors{}, nil); err != nil {
+	if buf.data, err = Append(buf.data[:0], x, EscapeHTML|SortMapKeys, Colors{}, nil); err != nil {
 		return nil, err
 	}
 
@@ -378,7 +376,7 @@ type Encoder struct {
 	buffer   *bytes.Buffer
 	err      error
 	flags    AppendFlags
-	clrs     internal.Colors
+	clrs     Colors
 	indenter *Indenter
 }
 
@@ -386,7 +384,7 @@ type Encoder struct {
 func NewEncoder(w io.Writer) *Encoder { return &Encoder{writer: w, flags: EscapeHTML | SortMapKeys} }
 
 // SetColors sets the colors for the encoder to use.
-func (enc *Encoder) SetColors(c internal.Colors) {
+func (enc *Encoder) SetColors(c Colors) {
 	enc.clrs = c
 }
 

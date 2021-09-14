@@ -7,7 +7,7 @@ import (
 
 	segmentj "github.com/segmentio/encoding/json"
 
-	jcolorenc "github.com/neilotoole/sq/cli/output/jsonw/internal/jcolorenc"
+	"github.com/neilotoole/jsoncolor"
 
 	"github.com/neilotoole/sq/testh"
 	"github.com/neilotoole/sq/testh/sakila"
@@ -94,7 +94,7 @@ func BenchmarkJColorEnc(b *testing.B) {
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
-		enc := jcolorenc.NewEncoder(ioutil.Discard)
+		enc := jsoncolor.NewEncoder(ioutil.Discard)
 		enc.SetEscapeHTML(false)
 
 		for i := range recs {
@@ -111,7 +111,7 @@ func BenchmarkJColorEnc_Indent(b *testing.B) {
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
-		enc := jcolorenc.NewEncoder(ioutil.Discard)
+		enc := jsoncolor.NewEncoder(ioutil.Discard)
 		enc.SetEscapeHTML(false)
 		enc.SetIndent("", "  ")
 
