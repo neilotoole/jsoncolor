@@ -148,7 +148,8 @@ func TestEncode_SmallStruct(t *testing.T) {
 			enc := jcolorenc.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(true)
-			enc.SetColors(internal.NewColors(fm))
+			colors := jsoncolor.NewDefaultColors()
+			enc.SetColors(colors)
 
 			if fm.Pretty {
 				enc.SetIndent("", "  ")
