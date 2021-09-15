@@ -4,24 +4,39 @@ import (
 	stdj "encoding/json"
 	"io/ioutil"
 	"testing"
+	"time"
 
 	segmentj "github.com/segmentio/encoding/json"
 
 	"github.com/neilotoole/jsoncolor"
-
-	"github.com/neilotoole/sq/testh"
-	"github.com/neilotoole/sq/testh/sakila"
 )
+
+func makeBenchRecs() [][]interface{} {
+	const maxRecs = 20000
+	recs := make([][]interface{}, 0, maxRecs)
+	for i := 0; i < maxRecs; i++ {
+		rec := []interface{}{
+			1,
+			2,
+			"3.00",
+			true,
+			time.Unix(1631659220, 0),
+		}
+		recs = append(recs, rec)
+	}
+
+	return recs
+}
 
 // The following benchmarks compare the encoding performance
 // of JSON encoders. These are:
 //
 // - stdj: the std lib json encoder
 // - segmentj: the encoder by segment.io
-// - jcolorenc: sq's fork of segmentj that supports color
+// - jsoncolor: this fork of segmentj that supports color
 
 func BenchmarkStdj(b *testing.B) {
-	_, recs := testh.RecordsFromTbl(b, sakila.SL3, "payment")
+	recs := makeBenchRecs()
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
@@ -38,7 +53,7 @@ func BenchmarkStdj(b *testing.B) {
 }
 
 func BenchmarkStdj_Indent(b *testing.B) {
-	_, recs := testh.RecordsFromTbl(b, sakila.SL3, "payment")
+	recs := makeBenchRecs()
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
@@ -56,7 +71,7 @@ func BenchmarkStdj_Indent(b *testing.B) {
 }
 
 func BenchmarkSegmentj(b *testing.B) {
-	_, recs := testh.RecordsFromTbl(b, sakila.SL3, "payment")
+	recs := makeBenchRecs()
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
@@ -73,7 +88,7 @@ func BenchmarkSegmentj(b *testing.B) {
 }
 
 func BenchmarkSegmentj_Indent(b *testing.B) {
-	_, recs := testh.RecordsFromTbl(b, sakila.SL3, "payment")
+	recs := makeBenchRecs()
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
@@ -89,8 +104,8 @@ func BenchmarkSegmentj_Indent(b *testing.B) {
 		}
 	}
 }
-func BenchmarkJColorEnc(b *testing.B) {
-	_, recs := testh.RecordsFromTbl(b, sakila.SL3, "payment")
+func BenchmarkJSONColorEnc(b *testing.B) {
+	recs := makeBenchRecs()
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
@@ -106,8 +121,8 @@ func BenchmarkJColorEnc(b *testing.B) {
 	}
 }
 
-func BenchmarkJColorEnc_Indent(b *testing.B) {
-	_, recs := testh.RecordsFromTbl(b, sakila.SL3, "payment")
+func BenchmarkJSONColor_Indent(b *testing.B) {
+	recs := makeBenchRecs()
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {

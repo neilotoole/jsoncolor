@@ -21,8 +21,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-
-	"github.com/rogpeppe/go-internal/testenv"
 )
 
 type codeResponse struct {

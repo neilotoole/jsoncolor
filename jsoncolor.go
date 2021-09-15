@@ -2,21 +2,42 @@ package jsoncolor
 
 import (
 	"bytes"
+	"io"
+	"os"
 	"strconv"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
+
+	//"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
-// Colors encapsulates colorization of JSON output.
+// Colors specifies colorization of JSON output.
 type Colors struct {
-	Null   Color
-	Bool   Color
+	// Null is the color for JSON nil.
+	Null Color
+
+	// Bool is the color for boolean values.
+	Bool Color
+
+	// Number is the color for number values.
 	Number Color
+
+	// String is the color for string values.
 	String Color
-	Key    Color
-	Bytes  Color
-	Time   Color
-	Punc   Color
+
+	// Key is the color for JSON keys.
+	Key Color
+
+	// Bytes is the color for byte data.
+	Bytes Color
+
+	// Time is the color for datetime values.
+	Time Color
+
+	// Punc is the color for JSON punctuation.
+	Punc Color
 }
 
 // AppendNull appends a colorized "null" to b.
@@ -74,7 +95,7 @@ type Color struct {
 	Prefix []byte
 
 	// Suffix is the terminal color code suffix to print after the value (may be empty).
-	Suffix []byte
+	Suffix []byte // REVISIT: Can we get rid of this
 }
 
 // newColor creates a Color instance from a fatih/color instance.
@@ -101,7 +122,8 @@ func newColor(c *color.Color) Color {
 	return Color{Prefix: b[:i], Suffix: b[i+1:]}
 }
 
-func NewDefaultColors() Colors {
+// DefaultColors returns the default Colors configuration.
+func DefaultColors() Colors {
 	return Colors{
 		Null:   newColor(color.New(color.Faint)),
 		Bool:   newColor(color.New(color.Bold)),
@@ -111,5 +133,41 @@ func NewDefaultColors() Colors {
 		Bytes:  newColor(color.New(color.Faint)),
 		Time:   newColor(color.New(color.FgGreen, color.Faint)),
 		Punc:   newColor(color.New(color.Bold)),
+	}
+}
+
+// IsColorTerminal returns true if w is a colorable terminal.
+func IsColorTerminal(w io.Writer) bool {
+	if w == nil {
+		return false
+	}
+
+	if !isTerminal(w) {
+		return false
+	}
+
+	if os.Getenv("TERM") == "dumb" {
+		return false
+	}
+
+	f, ok := w.(*os.File)
+	if !ok {
+		return false
+	}
+
+	if isatty.IsCygwinTerminal(f.Fd()) {
+		return false
+	}
+
+	return true
+}
+
+// isTerminal returns true if w is a terminal.
+func isTerminal(w io.Writer) bool {
+	switch v := w.(type) {
+	case *os.File:
+		return term.IsTerminal(int(v.Fd()))
+	default:
+		return false
 	}
 }

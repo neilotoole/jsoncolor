@@ -2252,7 +2252,7 @@ func TestUnmarshalEmbeddedUnexported(t *testing.T) {
 		in:  `{"R":2,"Q":1}`,
 		ptr: new(S1),
 		out: &S1{R: 2},
-		err: fmt.Errorf("json: cannot set embedded pointer to unexported struct: json.embed1"),
+		err: fmt.Errorf("json: cannot set embedded pointer to unexported struct: jsoncolor.embed1"),
 	}, {
 		// The top level Q field takes precedence.
 		in:  `{"Q":1}`,
@@ -2274,7 +2274,7 @@ func TestUnmarshalEmbeddedUnexported(t *testing.T) {
 		in:  `{"R":2,"Q":1}`,
 		ptr: new(S5),
 		out: &S5{R: 2},
-		err: fmt.Errorf("json: cannot set embedded pointer to unexported struct: json.embed3"),
+		err: fmt.Errorf("json: cannot set embedded pointer to unexported struct: jsoncolor.embed3"),
 	}, {
 		// Issue 24152, ensure decodeState.indirect does not panic.
 		in:  `{"embed1": {"Q": 1}}`,

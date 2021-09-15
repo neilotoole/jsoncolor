@@ -11,15 +11,6 @@ import (
 	stdjson "encoding/json"
 )
 
-// Encoder encapsulates the methods of a JSON encoder.
-type Encoder interface {
-	Encode(v interface{}) error
-	SetEscapeHTML(on bool)
-	SetIndent(prefix, indent string)
-}
-
-var _ Encoder = (*jsoncolor.Encoder)(nil)
-
 func TestEncode(t *testing.T) {
 	testCases := []struct {
 		name    string
@@ -29,7 +20,7 @@ func TestEncode(t *testing.T) {
 		v       interface{}
 		want    string
 	}{
-		{name: "nil", pretty: true, v: nil, want: "null\n"},
+		{name: "nil", pretty: false, v: nil, want: "null\n"},
 		{name: "slice_empty", pretty: true, v: []int{}, want: "[]\n"},
 		{name: "slice_1_pretty", pretty: true, v: []interface{}{1}, want: "[\n  1\n]\n"},
 		{name: "slice_1_no_pretty", v: []interface{}{1}, want: "[1]\n"},
@@ -49,15 +40,15 @@ func TestEncode(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			colors := jsoncolor.NewDefaultColors()
-
 			buf := &bytes.Buffer{}
 			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(tc.sortMap)
-			enc.SetColors(colors)
 			if tc.pretty {
 				enc.SetIndent("", "  ")
+			}
+			if tc.color {
+				enc.SetColors(jsoncolor.DefaultColors())
 			}
 
 			require.NoError(t, enc.Encode(tc.v))
@@ -89,9 +80,11 @@ func TestEncode_Slice(t *testing.T) {
 			buf := &bytes.Buffer{}
 			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
-			enc.SetColors(jsoncolor.NewDefaultColors())
 			if tc.pretty {
 				enc.SetIndent("", "  ")
+			}
+			if tc.color {
+				enc.SetColors(jsoncolor.DefaultColors())
 			}
 
 			require.NoError(t, enc.Encode(tc.v))
@@ -130,10 +123,12 @@ func TestEncode_SmallStruct(t *testing.T) {
 			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(true)
-			colors := jsoncolor.NewDefaultColors()
-			enc.SetColors(colors)
+
 			if tc.pretty {
 				enc.SetIndent("", "  ")
+			}
+			if tc.color {
+				enc.SetColors(jsoncolor.DefaultColors())
 			}
 
 			require.NoError(t, enc.Encode(v))
@@ -175,9 +170,11 @@ func TestEncode_Map_Nested(t *testing.T) {
 			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(true)
-			enc.SetColors(jsoncolor.NewDefaultColors())
 			if tc.pretty {
 				enc.SetIndent("", "  ")
+			}
+			if tc.color {
+				enc.SetColors(jsoncolor.DefaultColors())
 			}
 
 			require.NoError(t, enc.Encode(v))
@@ -217,9 +214,11 @@ func TestEncode_Map_StringNotInterface(t *testing.T) {
 			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(tc.sortMap)
-			enc.SetColors(jsoncolor.NewDefaultColors())
 			if tc.pretty {
 				enc.SetIndent("", "  ")
+			}
+			if tc.color {
+				enc.SetColors(jsoncolor.DefaultColors())
 			}
 
 			require.NoError(t, enc.Encode(tc.v))
@@ -258,9 +257,11 @@ func TestEncode_RawMessage(t *testing.T) {
 			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(true)
-			enc.SetColors(jsoncolor.NewDefaultColors())
 			if tc.pretty {
 				enc.SetIndent("", "  ")
+			}
+			if tc.color {
+				enc.SetColors(jsoncolor.DefaultColors())
 			}
 
 			err := enc.Encode(tc.v)
@@ -303,9 +304,11 @@ func TestEncode_Map_StringRawMessage(t *testing.T) {
 			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(tc.sortMap)
-			enc.SetColors(jsoncolor.NewDefaultColors())
 			if tc.pretty {
 				enc.SetIndent("", "  ")
+			}
+			if tc.color {
+				enc.SetColors(jsoncolor.DefaultColors())
 			}
 
 			require.NoError(t, enc.Encode(tc.v))
@@ -336,9 +339,11 @@ func TestEncode_BigStruct(t *testing.T) {
 			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
 			enc.SetSortMapKeys(true)
-			enc.SetColors(jsoncolor.NewDefaultColors())
 			if tc.pretty {
 				enc.SetIndent("", "  ")
+			}
+			if tc.color {
+				enc.SetColors(jsoncolor.DefaultColors())
 			}
 
 			require.NoError(t, enc.Encode(v))
@@ -359,7 +364,7 @@ func TestEncode_Map_Not_StringInterface(t *testing.T) {
 	enc := jsoncolor.NewEncoder(buf)
 	enc.SetEscapeHTML(false)
 	enc.SetSortMapKeys(true)
-	enc.SetColors(jsoncolor.NewDefaultColors())
+	enc.SetColors(jsoncolor.DefaultColors())
 	enc.SetIndent("", "  ")
 
 	v := map[int32]string{
