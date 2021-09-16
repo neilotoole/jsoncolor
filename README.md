@@ -25,7 +25,7 @@ func main() {
     var enc *jsoncolor.Encoder
 	
     if jsoncolor.IsColorTerminal(out) {
-        out = colorable.NewColorable(os.Stdout)
+        out = colorable.NewColorable(out)
         enc = jsoncolor.NewEncoder(out)
         enc.SetColors(jsoncolor.DefaultColors())
     } else {
