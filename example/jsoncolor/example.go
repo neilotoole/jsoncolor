@@ -10,10 +10,12 @@ import (
 )
 
 func main() {
-	var out io.Writer = os.Stdout
-	var enc *jsoncolor.Encoder
+	var (
+		out io.Writer = os.Stdout
+		enc *jsoncolor.Encoder
+	)
 
-	// Note: remove this check if running in Goland, as IsColorTerminal
+	// Note: this check will fail if running in Goland, as IsColorTerminal
 	// will return false.
 	if jsoncolor.IsColorTerminal(out) {
 		out = colorable.NewColorable(out.(*os.File))

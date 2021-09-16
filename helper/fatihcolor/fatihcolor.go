@@ -1,19 +1,16 @@
 // Package fatihcolor provides a bridge between fatih/color
-// and neilotoole/jsoncolor's native colorization mechanism.
+// and neilotoole/jsoncolor's native mechanism. See ToCoreColors.
 package fatihcolor
 
 import (
 	"bytes"
-	"io"
-	"os"
-
-	"github.com/mattn/go-colorable"
 
 	"github.com/fatih/color"
 	"github.com/neilotoole/jsoncolor"
 )
 
-// Colors describes color and pretty-printing options.
+// Colors encapsulates JSON color output, using fatih/color elements.
+// It can be converted to a jsoncolor.Colors using ToCoreColors.
 type Colors struct {
 	// Bool is the color for boolean values.
 	Bool *color.Color
@@ -42,8 +39,8 @@ type Colors struct {
 	Punc *color.Color
 }
 
-// NewDefaultColors returns default Colors instance.
-func NewDefaultColors() *Colors {
+// DefaultColors returns default Colors instance.
+func DefaultColors() *Colors {
 	return &Colors{
 		Bool:     color.New(color.FgYellow),
 		Bytes:    color.New(color.Faint),
@@ -95,33 +92,4 @@ func ToCoreColor(c *color.Color) jsoncolor.Color {
 	}
 
 	return jsoncolor.Color{Prefix: b[:i], Suffix: b[i+1:]}
-}
-
-// NewEncoder returns a jsoncolor.Encoder configured to output
-// in color, if clrs is non-nil. If clrs is nil, a "plain" jsoncolor.Encoder
-// is returned. Effectively, this function provides a bridge between
-// github.com/fatih/color and jsoncolor.Colors.
-//
-// Note that if clrs is non-nil, the encoder may write to an io.Writer
-// instance that is not the out arg (e.g. the encoder's io.Writer may
-// be a decorated version of out).
-//
-// Note also that the returned encoder may need to be further customized
-// by invoking SetIndent, SetEscapeHTML, SetSortMapKeys, SetTrustRawMessage,
-// etc.
-func NewEncoder(out io.Writer, clrs *Colors) *jsoncolor.Encoder {
-	if clrs == nil {
-		return jsoncolor.NewEncoder(out)
-	}
-
-	if !jsoncolor.IsColorTerminal(out) {
-		out = colorable.NewNonColorable(out)
-	} else {
-		out = colorable.NewColorable(out.(*os.File))
-	}
-
-	enc := jsoncolor.NewEncoder(out)
-	coreClrs := ToCoreColors(clrs)
-	enc.SetColors(coreClrs)
-	return enc
 }

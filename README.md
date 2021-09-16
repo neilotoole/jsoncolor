@@ -1,8 +1,14 @@
 # jsoncolor
-Golang colorized JSON output
 
-`neilotoole/jsoncolor` is a fork of `github.com/segmentio/encoding`'s `json` package that
-provides colorized JSON output.
+Package `neilotoole/jsoncolor` provides a replacement for `encoding/json`
+that can output colorized JSON.
+
+## History
+
+This package is an extract of [neilotoole/sq](https://github.com/neilotoole/sq)'s `jsonw`
+package, which itself is a fork of the [segment.io/encoding](https://github.com/segmentio/encoding) JSON
+encoding package.
+
 
 ## Usage
 
@@ -12,6 +18,4 @@ Get the package:
 go get -u github.com/neilotoole/jsoncolor
 ```
 
-```go
 
-```
