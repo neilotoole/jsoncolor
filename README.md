@@ -25,10 +25,12 @@ func main() {
     var enc *jsoncolor.Encoder
 	
     if jsoncolor.IsColorTerminal(out) {
+		// Safe to use color
         out = colorable.NewColorable(out)
         enc = jsoncolor.NewEncoder(out)
         enc.SetColors(jsoncolor.DefaultColors())
     } else {
+		// Can't use color
         enc = jsoncolor.NewEncoder(out)
     }
     
