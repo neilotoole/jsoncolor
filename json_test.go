@@ -63,7 +63,7 @@ func TestMain(m *testing.M) {
 		}
 
 		marshal = func(b []byte, v interface{}) ([]byte, error) {
-			return Append(b, v, flags, Colors{}, nil)
+			return Append(b, v, flags, nil, nil)
 		}
 
 		unmarshal = func(b []byte, v interface{}) error {
