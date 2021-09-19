@@ -3,6 +3,7 @@ package jsoncolor_test
 import (
 	"bytes"
 	"fmt"
+	"github.com/segmentio/encoding/json"
 	"testing"
 
 	"github.com/neilotoole/jsoncolor"
@@ -10,6 +11,84 @@ import (
 
 	stdjson "encoding/json"
 )
+
+// These types exist to verify compatibility with encoding/json.
+type (
+	FuncCompact    = func(dst *bytes.Buffer, src []byte) error
+	FuncHTMLEscape = func(dst *bytes.Buffer, src []byte)
+	FuncIndent     = func(dst *bytes.Buffer, src []byte, prefix, indent string) error
+	FuncMarshal    = func(v interface{}) ([]byte, error)
+	FuncMarshalIndent = func(v interface{}, prefix, indent string) ([]byte, error)
+	FuncUnmarshal = func (data []byte, v interface{}) error
+	FuncValid = func (data []byte) bool
+)
+
+// TestPackageDropIn verifies that jsoncolor can be a drop-in
+// for encoding/json.
+func TestPackageDropIn(t *testing.T) {
+	// Verify types exists
+	var (
+		_ = jsoncolor.Decoder{}
+		_ = jsoncolor.Delim(0)
+		_ = jsoncolor.Encoder{}
+		_ = jsoncolor.InvalidUTF8Error{}
+		_ = jsoncolor.InvalidUnmarshalError{}
+		_ = jsoncolor.Marshaler(nil)
+		_ = jsoncolor.MarshalerError{}
+		_ = jsoncolor.Number("0")
+		_ = jsoncolor.RawMessage{}
+		_ = jsoncolor.SyntaxError{}
+		_ = jsoncolor.Token(nil)
+		_ = jsoncolor.UnmarshalFieldError{}
+		_ = jsoncolor.UnmarshalTypeError{}
+		_ = jsoncolor.Unmarshaler(nil)
+		_ = jsoncolor.UnsupportedTypeError{}
+		_ = jsoncolor.UnsupportedValueError{}
+	)
+
+	// Verify funcs behave the same
+	var fc FuncCompact
+	fc =  json.Compact
+	fc = jsoncolor.Compact
+	_ = fc
+
+
+	var fh FuncHTMLEscape
+	fh =  json.HTMLEscape
+	fh = jsoncolor.HTMLEscape
+	_ = fh
+
+
+	var fi FuncIndent
+	fi =  json.Indent
+	fi = jsoncolor.Indent
+	_ = fi
+
+
+	var fm FuncMarshal
+	fm =  json.Marshal
+	fm = jsoncolor.Marshal
+	_ = fm
+
+
+	var fmi FuncMarshalIndent
+	fmi =  json.MarshalIndent
+	fmi = jsoncolor.MarshalIndent
+	_ = fmi
+
+
+	var fu FuncUnmarshal
+	fu =  json.Unmarshal
+	fu = jsoncolor.Unmarshal
+	_ = fu
+
+
+	var fv FuncValid
+	fv =  json.Valid
+	fv = jsoncolor.Valid
+	_ = fv
+}
+
 
 func TestEncode(t *testing.T) {
 	testCases := []struct {

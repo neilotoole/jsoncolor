@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/mattn/go-colorable"
-	"github.com/neilotoole/jsoncolor"
+	json "github.com/neilotoole/jsoncolor"
 )
 
 var (
@@ -34,6 +34,7 @@ var (
 func printUsage() {
 	const msg = `
 jc (jsoncolor) is a trivial CLI to demonstrate the neilotoole/jsoncolor package.
+It accepts JSON input, and outputs colorized, prettified JSON.
 
 Example Usage:
 
@@ -95,7 +96,7 @@ func doMain() error {
 	}
 
 	jsn := new(interface{}) // generic interface{} that will hold the parsed JSON
-	if err = jsoncolor.Unmarshal(input, jsn); err != nil {
+	if err = json.Unmarshal(input, jsn); err != nil {
 		return fmt.Errorf("invalid input JSON: %w", err)
 	}
 
@@ -126,18 +127,18 @@ func doMain() error {
 		out = os.Stdout
 	}
 
-	var enc *jsoncolor.Encoder
+	var enc *json.Encoder
 
-	if flagColorize != nil && *flagColorize == true && jsoncolor.IsColorTerminal(out) {
-		out = colorable.NewColorable(out.(*os.File))
-		enc = jsoncolor.NewEncoder(out)
-		clrs := jsoncolor.DefaultColors()
+	if flagColorize != nil && *flagColorize == true && json.IsColorTerminal(out) {
+		out = colorable.NewColorable(out.(*os.File)) // colorable is needed for Windows
+		enc = json.NewEncoder(out)
+		clrs := json.DefaultColors()
 		enc.SetColors(clrs)
 	} else {
-		// NOT doing color output, either flag not set, or could be
-		// outputting to a file etc.
+		// We are NOT doing color output: either flag not set, or we
+		// could be outputting to a file etc.
 		// Therefore DO NOT call enc.SetColors.
-		enc = jsoncolor.NewEncoder(out)
+		enc = json.NewEncoder(out)
 	}
 
 	if flagPretty != nil && *flagPretty == true {

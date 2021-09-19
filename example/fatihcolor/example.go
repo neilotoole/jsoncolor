@@ -1,7 +1,10 @@
+// Package main is a trivial program that outputs colorized JSON,
+// demonstrating how to use the fatihcolor helper to build
+// the jsoncolor.Colors struct.
 package main
 
 import (
-	"io"
+	"fmt"
 	"os"
 
 	"github.com/fatih/color"
@@ -12,26 +15,23 @@ import (
 )
 
 func main() {
-	var (
-		out io.Writer = os.Stdout
-		enc *jsoncolor.Encoder
-	)
+	var enc *jsoncolor.Encoder
 
-	// Note: this check will fail if running in Goland, as IsColorTerminal
-	// will return false.
-	if jsoncolor.IsColorTerminal(out) {
+	// Note: this check will fail if running inside Goland (and
+	// other IDEs?) as IsColorTerminal will return false.
+	if jsoncolor.IsColorTerminal(os.Stdout) {
 		fclrs := fatihcolor.DefaultColors()
 
 		// Change some values, just for fun
-		fclrs.Number = color.New(color.FgBlue) // Change one of the values for fun
-		fclrs.String = color.New(color.FgCyan) // Change one of the values for fun
+		fclrs.Number = color.New(color.FgBlue)
+		fclrs.String = color.New(color.FgCyan)
 
 		clrs := fatihcolor.ToCoreColors(fclrs)
-		out = colorable.NewColorable(out.(*os.File))
+		out := colorable.NewColorable(os.Stdout)
 		enc = jsoncolor.NewEncoder(out)
 		enc.SetColors(clrs)
 	} else {
-		enc = jsoncolor.NewEncoder(out)
+		enc = jsoncolor.NewEncoder(os.Stdout)
 	}
 	enc.SetIndent("", "  ")
 
@@ -42,6 +42,7 @@ func main() {
 	}
 
 	if err := enc.Encode(m); err != nil {
-		panic(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }
