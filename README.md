@@ -73,8 +73,8 @@ cat ./testdata/sakila_actor.json | jc
 
 ### History
 
-This package is an extract of [neilotoole/sq](https://github.com/neilotoole/sq)'s JSON encoding
-package, which itself is a fork of the [segment.io/encoding](https://github.com/segmentio/encoding) JSON
+This package is an extract of [`neilotoole/sq`](https://github.com/neilotoole/sq)'s JSON encoding
+package, which itself is a fork of the [`segment.io/encoding`](https://github.com/segmentio/encoding) JSON
 encoding package.
 
 Note that the original `jsoncolor` codebase was forked from Segment's package at `v0.1.14`, so
