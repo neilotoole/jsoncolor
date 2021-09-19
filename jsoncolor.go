@@ -43,9 +43,9 @@ func (c *Colors) AppendNull(b []byte) []byte {
 		return append(b, "null"...)
 	}
 
-	b = append(b, c.Null.Prefix...)
+	b = append(b, c.Null...)
 	b = append(b, "null"...)
-	return append(b, c.Null.Suffix...)
+	return append(b, ansiReset...)
 }
 
 // AppendBool appends the colorized bool v to b.
@@ -58,14 +58,14 @@ func (c *Colors) AppendBool(b []byte, v bool) []byte {
 		return append(b, "false"...)
 	}
 
-	b = append(b, c.Bool.Prefix...)
+	b = append(b, c.Bool...)
 	if v {
 		b = append(b, "true"...)
 	} else {
 		b = append(b, "false"...)
 	}
 
-	return append(b, c.Bool.Suffix...)
+	return append(b, ansiReset...)
 }
 
 // AppendKey appends the colorized key v to b.
@@ -74,9 +74,9 @@ func (c *Colors) AppendKey(b []byte, v []byte) []byte {
 		return append(b, v...)
 	}
 
-	b = append(b, c.Key.Prefix...)
+	b = append(b, c.Key...)
 	b = append(b, v...)
-	return append(b, c.Key.Suffix...)
+	return append(b, ansiReset...)
 }
 
 // AppendInt64 appends the colorized int64 v to b.
@@ -85,9 +85,9 @@ func (c *Colors) AppendInt64(b []byte, v int64) []byte {
 		return strconv.AppendInt(b, v, 10)
 	}
 
-	b = append(b, c.Number.Prefix...)
+	b = append(b, c.Number...)
 	b = strconv.AppendInt(b, v, 10)
-	return append(b, c.Number.Suffix...)
+	return append(b, ansiReset...)
 }
 
 // AppendUint64 appends the colorized uint64 v to b.
@@ -96,9 +96,9 @@ func (c *Colors) AppendUint64(b []byte, v uint64) []byte {
 		return strconv.AppendUint(b, v, 10)
 	}
 
-	b = append(b, c.Number.Prefix...)
+	b = append(b, c.Number...)
 	b = strconv.AppendUint(b, v, 10)
-	return append(b, c.Number.Suffix...)
+	return append(b, ansiReset...)
 }
 
 // AppendPunc appends the colorized punctuation mark v to b.
@@ -107,36 +107,31 @@ func (c *Colors) AppendPunc(b []byte, v byte) []byte {
 		return append(b, v)
 	}
 
-	b = append(b, c.Punc.Prefix...)
+	b = append(b, c.Punc...)
 	b = append(b, v)
-	return append(b, c.Punc.Suffix...)
+	return append(b, ansiReset...)
 }
 
-// Color is used to render terminal colors. The Prefix
-// value is written, then the actual value, then the suffix.
-type Color struct {
-	// Prefix is the terminal color code prefix to print before the value (may be empty).
-	Prefix []byte
+// Color is used to render terminal colors. In effect, Color is
+// the ANSI prefix code: the prefix is written, then the actual value,
+// then the ANSI reset code.
+type Color []byte
 
-	// Suffix is the terminal color code suffix to print after the value (may be empty).
-	Suffix []byte
-}
-
-// reset is the ANSI reset escape code.
-const reset = "\x1b[0m"
+// ansiReset is the ANSI ansiReset escape code.
+const ansiReset = "\x1b[0m"
 
 // DefaultColors returns the default Colors configuration.
 // These colors attempt to follow jq's default colorization.
 func DefaultColors() *Colors {
 	return &Colors{
-		Null:   Color{Prefix: []byte("\x1b[2m"), Suffix: []byte(reset)},
-		Bool:   Color{Prefix: []byte("\x1b[1m"), Suffix: []byte(reset)},
-		Number: Color{Prefix: []byte("\x1b[36m"), Suffix: []byte(reset)},
-		String: Color{Prefix: []byte("\x1b[32m"), Suffix: []byte(reset)},
-		Key:    Color{Prefix: []byte("\x1b[34;1m"), Suffix: []byte(reset)},
-		Bytes:  Color{Prefix: []byte("\x1b[2m"), Suffix: []byte(reset)},
-		Time:   Color{Prefix: []byte("\x1b[32;2m"), Suffix: []byte(reset)},
-		Punc:   Color{Prefix: []byte("\x1b[1m"), Suffix: []byte(reset)},
+		Null:   Color("\x1b[2m"),
+		Bool:   Color("\x1b[1m"),
+		Number: Color("\x1b[36m"),
+		String: Color("\x1b[32m"),
+		Key:    Color("\x1b[34;1m"),
+		Bytes:  Color("\x1b[2m"),
+		Time:   Color("\x1b[32;2m"),
+		Punc:   Color("\x1b[1m"),
 	}
 }
 
