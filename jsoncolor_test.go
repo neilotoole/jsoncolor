@@ -3,9 +3,10 @@ package jsoncolor_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/segmentio/encoding/json"
 	"io/ioutil"
 	"testing"
+
+	"github.com/segmentio/encoding/json"
 
 	"github.com/neilotoole/jsoncolor"
 	"github.com/stretchr/testify/require"
@@ -13,7 +14,7 @@ import (
 	stdjson "encoding/json"
 )
 
-// TestPackageDropIn checks that jsoncolor satisifes basic requirements
+// TestPackageDropIn checks that jsoncolor satisfies basic requirements
 // to be a drop-in for encoding/json.
 func TestPackageDropIn(t *testing.T) {
 	// Verify encoding/json types exists
