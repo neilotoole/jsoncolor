@@ -53,8 +53,8 @@ func main() {
 
 ## Example app: `jc`
 
-See `cmd/jc` for a trivial CLI implementation that can accept JSON input
-and output in color.
+See `./cmd/jc` for a trivial CLI implementation that can accept JSON input,
+and output that JSON in color.
 
 ```shell
 # From project root
@@ -62,23 +62,32 @@ go install ./cmd/jc
 cat ./testdata/sakila_actor.json | jc
 ```
 
+### Problems
+
+Currently the encoder is broken wrt colors enabled for non-string map keys.
+
+
 ### History
 
-This package is an extract of [neilotoole/sq](https://github.com/neilotoole/sq)'s `jsonw`
+This package is an extract of [neilotoole/sq](https://github.com/neilotoole/sq)'s JSON encoding
 package, which itself is a fork of the [segment.io/encoding](https://github.com/segmentio/encoding) JSON
-encoding package. Note that `jsoncolor` was forked from Segment's package at `v0.1.14`, so
+encoding package.
+
+Note that the original `jsoncolor` codebase was forked from Segment's package at `v0.1.14`, so
 this codebase is quite of out sync by now.
 
 ### Acknowledgments
 
 - [jq](https://stedolan.github.io/jq/): sine qua non.
-- [`segmentio/encoding`](https://github.com/segmentio/encoding): this package is layered into Segment's JSON encoder. Much gratitude to that team.
+- [`segmentio/encoding`](https://github.com/segmentio/encoding): `jsoncolor` is layered into Segment's JSON encoder. Much gratitude to that team.
 - [`neilotoole/sq`](https://github.com/neilotoole/sq): `jsoncolor` is effectively an extract of the code created specifically for the `sq` tool.
 
 ### Related
 
+> None of these packages are full "drop-in" replacements for `json/encoding` (missing some functions or types etc.)
+
 - [nwidger/jsoncolor](https://github.com/nwidger/jsoncolor)
-- [hokaccha/go-prettyjson](https://github.com/hokaccha/go-prettyjson): doesn't provide an encoder.
-- [TylerBrock/colorjson](https://github.com/TylerBrock/colorjson): doesn't provide an encoder.
+- [hokaccha/go-prettyjson](https://github.com/hokaccha/go-prettyjson)
+- [TylerBrock/colorjson](https://github.com/TylerBrock/colorjson)
 
 

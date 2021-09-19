@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/segmentio/encoding/json"
+	"io/ioutil"
 	"testing"
 
 	"github.com/neilotoole/jsoncolor"
@@ -12,21 +13,10 @@ import (
 	stdjson "encoding/json"
 )
 
-// These types exist to verify compatibility with encoding/json.
-type (
-	FuncCompact    = func(dst *bytes.Buffer, src []byte) error
-	FuncHTMLEscape = func(dst *bytes.Buffer, src []byte)
-	FuncIndent     = func(dst *bytes.Buffer, src []byte, prefix, indent string) error
-	FuncMarshal    = func(v interface{}) ([]byte, error)
-	FuncMarshalIndent = func(v interface{}, prefix, indent string) ([]byte, error)
-	FuncUnmarshal = func (data []byte, v interface{}) error
-	FuncValid = func (data []byte) bool
-)
-
-// TestPackageDropIn verifies that jsoncolor can be a drop-in
-// for encoding/json.
+// TestPackageDropIn checks that jsoncolor satisifes basic requirements
+// to be a drop-in for encoding/json.
 func TestPackageDropIn(t *testing.T) {
-	// Verify types exists
+	// Verify encoding/json types exists
 	var (
 		_ = jsoncolor.Decoder{}
 		_ = jsoncolor.Delim(0)
@@ -46,47 +36,74 @@ func TestPackageDropIn(t *testing.T) {
 		_ = jsoncolor.UnsupportedValueError{}
 	)
 
-	// Verify funcs behave the same
-	var fc FuncCompact
-	fc =  json.Compact
-	fc = jsoncolor.Compact
-	_ = fc
+	const prefix, indent = "", "  "
 
+	testCases := []string{"testdata/sakila_actor.json", "testdata/sakila_payment.json"}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc, func(t *testing.T) {
+			b, readErr := ioutil.ReadFile(tc)
+			require.NoError(t, readErr)
 
-	var fh FuncHTMLEscape
-	fh =  json.HTMLEscape
-	fh = jsoncolor.HTMLEscape
-	_ = fh
+			// Test json.Valid equivalence
+			var fv1, fv2 = json.Valid, jsoncolor.Valid
+			require.Equal(t, fv1(b), fv2(b))
 
+			// Test json.Unmarshal equivalence
+			var fu1, fu2 = json.Unmarshal, jsoncolor.Unmarshal
+			var m1, m2 interface{}
+			err1, err2 := fu1(b, &m1), fu2(b, &m2)
+			require.NoError(t, err1)
+			require.NoError(t, err2)
+			require.EqualValues(t, m1, m2)
 
-	var fi FuncIndent
-	fi =  json.Indent
-	fi = jsoncolor.Indent
-	_ = fi
+			// Test json.Marshal equivalence
+			var fm1, fm2 = json.Marshal, jsoncolor.Marshal
+			gotMarshalB1, err1 := fm1(m1)
+			require.NoError(t, err1)
+			gotMarshalB2, err2 := fm2(m1)
+			require.NoError(t, err2)
+			require.Equal(t, gotMarshalB1, gotMarshalB2)
 
+			// Test json.MarshalIndent equivalence
+			var fmi1, fmi2 = json.MarshalIndent, jsoncolor.MarshalIndent
+			gotMarshallIndentB1, err1 := fmi1(m1, prefix, indent)
+			require.NoError(t, err1)
+			gotMarshalIndentB2, err2 := fmi2(m1, prefix, indent)
+			require.NoError(t, err2)
+			require.Equal(t, gotMarshallIndentB1, gotMarshalIndentB2)
 
-	var fm FuncMarshal
-	fm =  json.Marshal
-	fm = jsoncolor.Marshal
-	_ = fm
+			// Test json.Compact equivalence
+			var fc1, fc2 = json.Compact, jsoncolor.Compact
+			var buf1, buf2 = &bytes.Buffer{}, &bytes.Buffer{}
+			err1 = fc1(buf1, gotMarshallIndentB1)
+			require.NoError(t, err1)
+			err2 = fc2(buf2, gotMarshalIndentB2)
+			require.NoError(t, err2)
+			require.Equal(t, buf1.Bytes(), buf2.Bytes())
+			// Double-check
+			require.Equal(t, buf1.Bytes(), gotMarshalB1)
+			require.Equal(t, buf2.Bytes(), gotMarshalB2)
+			buf1.Reset()
+			buf2.Reset()
 
+			// Test json.Indent equivalence
+			var fi1, fi2 = json.Indent, jsoncolor.Indent
+			err1 = fi1(buf1, gotMarshalB1, prefix, indent)
+			require.NoError(t, err1)
+			err2 = fi2(buf2, gotMarshalB2, prefix, indent)
+			require.NoError(t, err2)
+			require.Equal(t, buf1.Bytes(), buf2.Bytes())
+			buf1.Reset()
+			buf2.Reset()
 
-	var fmi FuncMarshalIndent
-	fmi =  json.MarshalIndent
-	fmi = jsoncolor.MarshalIndent
-	_ = fmi
-
-
-	var fu FuncUnmarshal
-	fu =  json.Unmarshal
-	fu = jsoncolor.Unmarshal
-	_ = fu
-
-
-	var fv FuncValid
-	fv =  json.Valid
-	fv = jsoncolor.Valid
-	_ = fv
+			// Test json.HTMLEscape equivalence
+			var fh1, fh2 = json.HTMLEscape, jsoncolor.HTMLEscape
+			fh1(buf1, gotMarshalB1)
+			fh2(buf2, gotMarshalB2)
+			require.Equal(t, buf1.Bytes(), buf2.Bytes())
+		})
+	}
 }
 
 
