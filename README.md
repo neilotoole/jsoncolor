@@ -3,7 +3,7 @@
 Package `neilotoole/jsoncolor` is a drop-in replacement for `encoding/json`
 that can output colorized JSON.
 
-![jsoncolor-output](https://github.com/neilotoole/jsoncolor/wiki/images/jsoncolor-example-output.png)
+![jsoncolor-output](https://github.com/neilotoole/jsoncolor/wiki/images/jsoncolor-example-output2.png)
 
 ## Usage
 
@@ -13,7 +13,7 @@ Get the package per the normal mechanism:
 go get -u github.com/neilotoole/jsoncolor
 ```
 
-Use as follows:
+Then:
 
 ```go
 package main
@@ -93,5 +93,3 @@ this codebase is quite of out sync by now.
 - [`nwidger/jsoncolor`](https://github.com/nwidger/jsoncolor)
 - [`hokaccha/go-prettyjson`](https://github.com/hokaccha/go-prettyjson)
 - [`TylerBrock/colorjson`](https://github.com/TylerBrock/colorjson)
-
-
