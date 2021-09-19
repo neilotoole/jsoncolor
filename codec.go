@@ -20,7 +20,7 @@ type codec struct {
 }
 
 type encoder struct {
-	flags    AppendFlags
+	flags   AppendFlags
 	clrs    *Colors
 	indentr *indenter
 }

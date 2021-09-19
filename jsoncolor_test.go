@@ -106,7 +106,6 @@ func TestPackageDropIn(t *testing.T) {
 	}
 }
 
-
 func TestEncode(t *testing.T) {
 	testCases := []struct {
 		name    string

@@ -376,9 +376,9 @@ type Encoder struct {
 	writer io.Writer
 	// prefix   string
 	// indent   string
-	buffer   *bytes.Buffer
-	err      error
-	flags    AppendFlags
+	buffer  *bytes.Buffer
+	err     error
+	flags   AppendFlags
 	clrs    *Colors
 	indentr *indenter
 }

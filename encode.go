@@ -978,9 +978,9 @@ func appendCompactEscapeHTML(dst []byte, src []byte) []byte {
 // methods are safe to use with a nil receiver.
 type indenter struct {
 	disabled bool
-	prefix string
-	indent string
-	depth  int
+	prefix   string
+	indent   string
+	depth    int
 }
 
 // newIndenter returns a new indenter instance. If prefix and
