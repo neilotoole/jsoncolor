@@ -1,8 +1,8 @@
 // Package main contains a trivial CLI that accepts JSON input either
 // via stdin or via "-i path/to/input.json", and outputs JSON
 // to stdout, or if "-o path/to/output.json" is set, outputs to that file.
-// If -c (colorized) is true, output to stdout will be colorized (but never
-// colorized for file output).
+// If -c (colorized) is true, output to stdout will be colorized if possible
+// (but never colorized for file output).
 //
 // Examples:
 //
