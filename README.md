@@ -82,9 +82,9 @@ this codebase is quite of out sync by now.
 
 ### Acknowledgments
 
-- [jq](https://stedolan.github.io/jq/): sine qua non.
+- [`jq`](https://stedolan.github.io/jq/): sine qua non.
 - [`segmentio/encoding`](https://github.com/segmentio/encoding): `jsoncolor` is layered into Segment's JSON encoder. Much gratitude to that team.
-- [`neilotoole/sq`](https://github.com/neilotoole/sq): `jsoncolor` is effectively an extract of the code created specifically for `sq`.
+- [`sq`](https://github.com/neilotoole/sq): `jsoncolor` is effectively an extract of the code created specifically for `sq`.
 - [`fatih/color`](https://github.com/fatih/color): handy color library.
 
 ### Related
