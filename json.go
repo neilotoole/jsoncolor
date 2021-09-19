@@ -180,7 +180,10 @@ func MarshalIndent(x interface{}, prefix, indent string) ([]byte, error) {
 		tmp := &bytes.Buffer{}
 		tmp.Grow(2 * len(b))
 
-		Indent(tmp, b, prefix, indent)
+		if err = Indent(tmp, b, prefix, indent); err != nil {
+			return b, err
+		}
+
 		b = tmp.Bytes()
 	}
 

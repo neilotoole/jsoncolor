@@ -82,7 +82,7 @@ func (c *Colors) AppendKey(b []byte, v []byte) []byte {
 // AppendInt64 appends the colorized int64 v to b.
 func (c *Colors) AppendInt64(b []byte, v int64) []byte {
 	if c == nil {
-		return  strconv.AppendInt(b, v, 10)
+		return strconv.AppendInt(b, v, 10)
 	}
 
 	b = append(b, c.Number.Prefix...)
@@ -122,7 +122,7 @@ type Color struct {
 	Suffix []byte
 }
 
-// reset is the ANSI reset escape code
+// reset is the ANSI reset escape code.
 const reset = "\x1b[0m"
 
 // DefaultColors returns the default Colors configuration.
