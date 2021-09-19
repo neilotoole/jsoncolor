@@ -69,6 +69,10 @@ func (e encoder) encodeUint64(b []byte, p unsafe.Pointer) ([]byte, error) {
 }
 
 func (e encoder) encodeFloat32(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil {
+		return e.encodeFloat(b, float64(*(*float32)(p)), 32)
+	}
+
 	b = append(b, e.clrs.Number.Prefix...)
 	var err error
 	b, err = e.encodeFloat(b, float64(*(*float32)(p)), 32)
@@ -77,6 +81,10 @@ func (e encoder) encodeFloat32(b []byte, p unsafe.Pointer) ([]byte, error) {
 }
 
 func (e encoder) encodeFloat64(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil {
+		return e.encodeFloat(b, *(*float64)(p), 64)
+	}
+
 	b = append(b, e.clrs.Number.Prefix...)
 	var err error
 	b, err = e.encodeFloat(b, *(*float64)(p), 64)
@@ -129,6 +137,10 @@ func (e encoder) encodeNumber(b []byte, p unsafe.Pointer) ([]byte, error) {
 	_, _, err := parseNumber(stringToBytes(string(n)))
 	if err != nil {
 		return b, err
+	}
+
+	if e.clrs == nil {
+		return append(b, n...), nil
 	}
 
 	b = append(b, e.clrs.Number.Prefix...)

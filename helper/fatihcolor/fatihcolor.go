@@ -54,8 +54,8 @@ func DefaultColors() *Colors {
 }
 
 // ToCoreColors converts clrs to a core jsoncolor.Colors instance.
-func ToCoreColors(clrs *Colors) jsoncolor.Colors {
-	return jsoncolor.Colors{
+func ToCoreColors(clrs *Colors) *jsoncolor.Colors {
+	return &jsoncolor.Colors{
 		Null:   ToCoreColor(clrs.Null),
 		Bool:   ToCoreColor(clrs.Bool),
 		Number: ToCoreColor(clrs.Number),
