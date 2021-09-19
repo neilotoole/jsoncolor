@@ -90,5 +90,5 @@ func ToCoreColor(c *color.Color) jsoncolor.Color {
 		return jsoncolor.Color{}
 	}
 
-	return jsoncolor.Color{Prefix: b[:i]}
+	return b[:i]
 }
