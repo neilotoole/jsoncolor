@@ -72,8 +72,7 @@ func ToCoreColors(clrs *Colors) *jsoncolor.Colors {
 func ToCoreColor(c *color.Color) jsoncolor.Color {
 	// Dirty conversion function ahead: print
 	// a space using c, then grab the bytes printed
-	// before and after the space, and those are the
-	// bytes we need for the prefix and suffix.
+	// before the space, as those are the bytes we need for.
 	// There's definitely a better way of doing this, but
 	// it works for now.
 
@@ -91,5 +90,5 @@ func ToCoreColor(c *color.Color) jsoncolor.Color {
 		return jsoncolor.Color{}
 	}
 
-	return jsoncolor.Color{Prefix: b[:i], Suffix: b[i+1:]}
+	return jsoncolor.Color{Prefix: b[:i]}
 }

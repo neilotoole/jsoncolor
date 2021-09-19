@@ -118,8 +118,6 @@ type Color struct {
 	// Prefix is the terminal color code prefix to print before the value (may be empty).
 	Prefix []byte
 
-	// Suffix is the terminal color code suffix to print after the value (may be empty).
-	Suffix []byte
 }
 
 // ansiReset is the ANSI ansiReset escape code.
@@ -129,14 +127,14 @@ const ansiReset = "\x1b[0m"
 // These colors attempt to follow jq's default colorization.
 func DefaultColors() *Colors {
 	return &Colors{
-		Null:   Color{Prefix: []byte("\x1b[2m"), Suffix: []byte(ansiReset)},
-		Bool:   Color{Prefix: []byte("\x1b[1m"), Suffix: []byte(ansiReset)},
-		Number: Color{Prefix: []byte("\x1b[36m"), Suffix: []byte(ansiReset)},
-		String: Color{Prefix: []byte("\x1b[32m"), Suffix: []byte(ansiReset)},
-		Key:    Color{Prefix: []byte("\x1b[34;1m"), Suffix: []byte(ansiReset)},
-		Bytes:  Color{Prefix: []byte("\x1b[2m"), Suffix: []byte(ansiReset)},
-		Time:   Color{Prefix: []byte("\x1b[32;2m"), Suffix: []byte(ansiReset)},
-		Punc:   Color{Prefix: []byte("\x1b[1m"), Suffix: []byte(ansiReset)},
+		Null:   Color{Prefix: []byte("\x1b[2m")},
+		Bool:   Color{Prefix: []byte("\x1b[1m")},
+		Number: Color{Prefix: []byte("\x1b[36m")},
+		String: Color{Prefix: []byte("\x1b[32m")},
+		Key:    Color{Prefix: []byte("\x1b[34;1m")},
+		Bytes:  Color{Prefix: []byte("\x1b[2m")},
+		Time:   Color{Prefix: []byte("\x1b[32;2m")},
+		Punc:   Color{Prefix: []byte("\x1b[1m")},
 	}
 }
 
