@@ -83,9 +83,10 @@ this codebase is quite of out sync by now.
 ### Acknowledgments
 
 - [`jq`](https://stedolan.github.io/jq/): sine qua non.
-- [`segmentio/encoding`](https://github.com/segmentio/encoding): `jsoncolor` is layered into Segment's JSON encoder. Much gratitude to that team.
+- [`segmentio/encoding`](https://github.com/segmentio/encoding): `jsoncolor` is layered into Segment's JSON encoder. They did the hard work. Much gratitude to that team.
 - [`sq`](https://github.com/neilotoole/sq): `jsoncolor` is effectively an extract of the code created specifically for `sq`.
-- [`fatih/color`](https://github.com/fatih/color): handy color library.
+- [`mattn/go-colorable`](https://github.com/mattn/go-colorable): no project is complete without `mattn` having played a role.
+- [`fatih/color`](https://github.com/fatih/color): the color library.
 
 ### Related
 
