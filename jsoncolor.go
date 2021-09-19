@@ -38,16 +38,27 @@ type Colors struct {
 }
 
 // AppendNull appends a colorized "null" to b.
-func (c Colors) AppendNull(b []byte) []byte {
+func (c *Colors) AppendNull(b []byte) []byte {
+	if c == nil {
+		return append(b, "null"...)
+	}
+
 	b = append(b, c.Null.Prefix...)
 	b = append(b, "null"...)
 	return append(b, c.Null.Suffix...)
 }
 
 // AppendBool appends the colorized bool v to b.
-func (c Colors) AppendBool(b []byte, v bool) []byte {
-	b = append(b, c.Bool.Prefix...)
+func (c *Colors) AppendBool(b []byte, v bool) []byte {
+	if c == nil {
+		if v {
+			return append(b, "true"...)
+		}
 
+		return append(b, "false"...)
+	}
+
+	b = append(b, c.Bool.Prefix...)
 	if v {
 		b = append(b, "true"...)
 	} else {
@@ -58,28 +69,44 @@ func (c Colors) AppendBool(b []byte, v bool) []byte {
 }
 
 // AppendKey appends the colorized key v to b.
-func (c Colors) AppendKey(b []byte, v []byte) []byte {
+func (c *Colors) AppendKey(b []byte, v []byte) []byte {
+	if c == nil {
+		return append(b, v...)
+	}
+
 	b = append(b, c.Key.Prefix...)
 	b = append(b, v...)
 	return append(b, c.Key.Suffix...)
 }
 
 // AppendInt64 appends the colorized int64 v to b.
-func (c Colors) AppendInt64(b []byte, v int64) []byte {
+func (c *Colors) AppendInt64(b []byte, v int64) []byte {
+	if c == nil {
+		return strconv.AppendInt(b, v, 10)
+	}
+
 	b = append(b, c.Number.Prefix...)
 	b = strconv.AppendInt(b, v, 10)
 	return append(b, c.Number.Suffix...)
 }
 
 // AppendUint64 appends the colorized uint64 v to b.
-func (c Colors) AppendUint64(b []byte, v uint64) []byte {
+func (c *Colors) AppendUint64(b []byte, v uint64) []byte {
+	if c == nil {
+		return strconv.AppendUint(b, v, 10)
+	}
+
 	b = append(b, c.Number.Prefix...)
 	b = strconv.AppendUint(b, v, 10)
 	return append(b, c.Number.Suffix...)
 }
 
 // AppendPunc appends the colorized punctuation mark v to b.
-func (c Colors) AppendPunc(b []byte, v byte) []byte {
+func (c *Colors) AppendPunc(b []byte, v byte) []byte {
+	if c == nil {
+		return append(b, v)
+	}
+
 	b = append(b, c.Punc.Prefix...)
 	b = append(b, v)
 	return append(b, c.Punc.Suffix...)
@@ -95,13 +122,13 @@ type Color struct {
 	Suffix []byte
 }
 
-// reset is the ANSI reset escape code
+// reset is the ANSI reset escape code.
 const reset = "\x1b[0m"
 
 // DefaultColors returns the default Colors configuration.
 // These colors attempt to follow jq's default colorization.
-func DefaultColors() Colors {
-	return Colors{
+func DefaultColors() *Colors {
+	return &Colors{
 		Null:   Color{Prefix: []byte("\x1b[2m"), Suffix: []byte(reset)},
 		Bool:   Color{Prefix: []byte("\x1b[1m"), Suffix: []byte(reset)},
 		Number: Color{Prefix: []byte("\x1b[36m"), Suffix: []byte(reset)},
@@ -115,6 +142,7 @@ func DefaultColors() Colors {
 
 // IsColorTerminal returns true if w is a colorable terminal.
 func IsColorTerminal(w io.Writer) bool {
+	// This logic could be pretty dodgy; use at your own risk.
 	if w == nil {
 		return false
 	}

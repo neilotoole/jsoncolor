@@ -69,6 +69,10 @@ func (e encoder) encodeUint64(b []byte, p unsafe.Pointer) ([]byte, error) {
 }
 
 func (e encoder) encodeFloat32(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil {
+		return e.encodeFloat(b, float64(*(*float32)(p)), 32)
+	}
+
 	b = append(b, e.clrs.Number.Prefix...)
 	var err error
 	b, err = e.encodeFloat(b, float64(*(*float32)(p)), 32)
@@ -77,6 +81,10 @@ func (e encoder) encodeFloat32(b []byte, p unsafe.Pointer) ([]byte, error) {
 }
 
 func (e encoder) encodeFloat64(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil {
+		return e.encodeFloat(b, *(*float64)(p), 64)
+	}
+
 	b = append(b, e.clrs.Number.Prefix...)
 	var err error
 	b, err = e.encodeFloat(b, *(*float64)(p), 64)
@@ -131,6 +139,10 @@ func (e encoder) encodeNumber(b []byte, p unsafe.Pointer) ([]byte, error) {
 		return b, err
 	}
 
+	if e.clrs == nil {
+		return append(b, n...), nil
+	}
+
 	b = append(b, e.clrs.Number.Prefix...)
 	b = append(b, n...)
 	b = append(b, e.clrs.Number.Suffix...)
@@ -138,6 +150,10 @@ func (e encoder) encodeNumber(b []byte, p unsafe.Pointer) ([]byte, error) {
 }
 
 func (e encoder) encodeKey(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil {
+		return e.doEncodeString(b, p)
+	}
+
 	b = append(b, e.clrs.Key.Prefix...)
 	var err error
 	b, err = e.doEncodeString(b, p)
@@ -146,6 +162,10 @@ func (e encoder) encodeKey(b []byte, p unsafe.Pointer) ([]byte, error) {
 }
 
 func (e encoder) encodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil {
+		return e.doEncodeString(b, p)
+	}
+
 	b = append(b, e.clrs.String.Prefix...)
 	var err error
 	b, err = e.doEncodeString(b, p)
@@ -273,6 +293,10 @@ func (e encoder) encodeToString(b []byte, p unsafe.Pointer, encode encodeFunc) (
 }
 
 func (e encoder) encodeBytes(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil {
+		return e.doEncodeBytes(b, p)
+	}
+
 	b = append(b, e.clrs.Bytes.Prefix...)
 	var err error
 	b, err = e.doEncodeBytes(b, p)
@@ -304,6 +328,13 @@ func (e encoder) doEncodeBytes(b []byte, p unsafe.Pointer) ([]byte, error) {
 }
 
 func (e encoder) encodeDuration(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil {
+		b = append(b, '"')
+		b = appendDuration(b, *(*time.Duration)(p))
+		b = append(b, '"')
+		return b, nil
+	}
+
 	b = append(b, e.clrs.Time.Prefix...)
 	b = append(b, '"')
 	b = appendDuration(b, *(*time.Duration)(p))
@@ -313,6 +344,14 @@ func (e encoder) encodeDuration(b []byte, p unsafe.Pointer) ([]byte, error) {
 }
 
 func (e encoder) encodeTime(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil {
+		t := *(*time.Time)(p)
+		b = append(b, '"')
+		b = t.AppendFormat(b, time.RFC3339Nano)
+		b = append(b, '"')
+		return b, nil
+	}
+
 	t := *(*time.Time)(p)
 	b = append(b, e.clrs.Time.Prefix...)
 	b = append(b, '"')
@@ -670,9 +709,14 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 		lengthBeforeKey := len(b)
 		b = e.indenter.AppendIndent(b)
 
-		b = append(b, e.clrs.Key.Prefix...)
-		b = append(b, k...)
-		b = append(b, e.clrs.Key.Suffix...)
+		if e.clrs == nil {
+			b = append(b, k...)
+		} else {
+			b = append(b, e.clrs.Key.Prefix...)
+			b = append(b, k...)
+			b = append(b, e.clrs.Key.Suffix...)
+		}
+
 		b = append(b, ':')
 
 		b = e.indenter.AppendByte(b, ' ')
