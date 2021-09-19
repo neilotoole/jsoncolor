@@ -17,7 +17,7 @@ Import it:
 import "github.com/neilotoole/jsoncolor"
 ```
 
-Then to use it:
+Use as follows:
 
 ```go
 func main() {
@@ -46,7 +46,7 @@ func main() {
 }
 ```
 
-## `jc`
+## Example app: `jc`
 
 See `cmd/jc` for a trivial CLI implementation that can accept JSON input
 and output in color.
@@ -61,6 +61,7 @@ cat ./testdata/sakila_actor.json | jc
 
 This package is an extract of [neilotoole/sq](https://github.com/neilotoole/sq)'s `jsonw`
 package, which itself is a fork of the [segment.io/encoding](https://github.com/segmentio/encoding) JSON
-encoding package.
+encoding package. Note that `jsoncolor` was forked from Segment's package at their `v0.1.14`, so
+this codebase is quite of out sync by now.
 
 Much gratitude to the Segment team for the superb work they put in on that package.
