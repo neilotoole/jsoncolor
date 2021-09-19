@@ -48,7 +48,8 @@ func TestEncode(t *testing.T) {
 				enc.SetIndent("", "  ")
 			}
 			if tc.color {
-				enc.SetColors(jsoncolor.DefaultColors())
+				clrs := jsoncolor.DefaultColors()
+				enc.SetColors(clrs)
 			}
 
 			require.NoError(t, enc.Encode(tc.v))
