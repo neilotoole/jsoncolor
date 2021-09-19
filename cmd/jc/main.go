@@ -68,14 +68,12 @@ func doMain() error {
 	if flagInputFile != nil && *flagInputFile != "" {
 		// Read from file
 		var f *os.File
-		f, err = os.Open(*flagInputFile)
-		if err != nil {
+		if f, err = os.Open(*flagInputFile); err != nil {
 			return err
 		}
 		defer f.Close()
 
-		input, err = ioutil.ReadAll(f)
-		if err != nil {
+		if input, err = ioutil.ReadAll(f); err != nil {
 			return err
 		}
 	} else {
@@ -104,20 +102,17 @@ func doMain() error {
 	if flagOutputFile != nil && *flagOutputFile != "" {
 		// Output file is specified via -o flag
 		var fpath string
-		fpath, err = filepath.Abs(*flagOutputFile)
-		if err != nil {
+		if fpath, err = filepath.Abs(*flagOutputFile); err != nil {
 			return fmt.Errorf("failed to get absolute path for -o %q: %w", *flagOutputFile, err)
 		}
 
 		// Ensure the parent dir exists
-		err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm)
-		if err != nil {
+		if err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
 			return fmt.Errorf("failed to make parent dir for -o %q: %w", *flagOutputFile, err)
 		}
 
 		var f *os.File
-		f, err = os.Create(fpath)
-		if err != nil {
+		if f, err = os.Create(fpath); err != nil {
 			return fmt.Errorf("failed to open output file specified by -o %q: %w", *flagOutputFile, err)
 		}
 		defer f.Close()
