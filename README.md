@@ -19,39 +19,37 @@ Use as follows:
 package main
 
 import (
-	"fmt"
-	"github.com/mattn/go-colorable"
-	"github.com/neilotoole/jsoncolor"
-	"os"
+  "fmt"
+  "github.com/mattn/go-colorable"
+  json "github.com/neilotoole/jsoncolor"
+  "os"
 )
 
 func main() {
-	var enc *jsoncolor.Encoder
-	
-	if jsoncolor.IsColorTerminal(os.Stdout) {
-		// Safe to use color
-		out := colorable.NewColorable(os.Stdout) // needed for Windows
-		enc = jsoncolor.NewEncoder(out)
-		enc.SetColors(jsoncolor.DefaultColors())
-	} else {
-		// Can't use color; but the encoder will still work
-		enc = jsoncolor.NewEncoder(os.Stdout)
-	}
+  var enc *json.Encoder
+  
+  if json.IsColorTerminal(os.Stdout) {
+    // Safe to use color
+    out := colorable.NewColorable(os.Stdout) // needed for Windows
+    enc = json.NewEncoder(out)
+    enc.SetColors(json.DefaultColors())
+  } else {
+    // Can't use color; but the encoder will still work
+    enc = json.NewEncoder(os.Stdout)
+  }
 
-	m := map[string]interface{}{
-		"a": 1,
-		"b": true,
-		"c": "hello",
-	}
+  m := map[string]interface{}{
+    "a": 1,
+    "b": true,
+    "c": "hello",
+  }
 
-	if err := enc.Encode(m); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+  if err := enc.Encode(m); err != nil {
+    fmt.Fprintln(os.Stderr, err)
+    os.Exit(1)
+  }
 }
 ```
-
-
 
 
 ## Example app: `jc`
@@ -69,8 +67,8 @@ cat ./testdata/sakila_actor.json | jc
 
 - Given the popularity of the [`fatih/color`](https://github.com/fatih/color) pkg, there is
   a helper pkg (`jsoncolor/helper/fatihcolor`) to build `jsoncolor` specs
-  from `fatih/color` structs.
-- Currently the encoder is broken wrt colors enabled for non-string map keys.
+  from `fatih/color`.
+- Currently the encoder is broken wrt colorization for non-string map keys.
 
 
 ### History
@@ -86,12 +84,10 @@ this codebase is quite of out sync by now.
 
 - [jq](https://stedolan.github.io/jq/): sine qua non.
 - [`segmentio/encoding`](https://github.com/segmentio/encoding): `jsoncolor` is layered into Segment's JSON encoder. Much gratitude to that team.
-- [`neilotoole/sq`](https://github.com/neilotoole/sq): `jsoncolor` is effectively an extract of the code created specifically for the `sq` tool.
-- [`fatih/color`](https://github.com/fatih/color): the library I typically use to generate colors.
+- [`neilotoole/sq`](https://github.com/neilotoole/sq): `jsoncolor` is effectively an extract of the code created specifically for `sq`.
+- [`fatih/color`](https://github.com/fatih/color): handy color library.
 
 ### Related
-
-> None of these packages are full "drop-in" replacements for `json/encoding` (missing some functions or types etc.)
 
 - [nwidger/jsoncolor](https://github.com/nwidger/jsoncolor)
 - [hokaccha/go-prettyjson](https://github.com/hokaccha/go-prettyjson)

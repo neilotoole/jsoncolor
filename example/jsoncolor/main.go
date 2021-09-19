@@ -1,27 +1,27 @@
 // Package main is a trivial program that outputs colorized JSON,
-// using jsoncolor.DefaultColors.
+// using json.DefaultColors.
 package main
 
 import (
 	"fmt"
 	"github.com/mattn/go-colorable"
-	"github.com/neilotoole/jsoncolor"
+	json "github.com/neilotoole/jsoncolor"
 	"os"
 )
 
 func main() {
-	var enc *jsoncolor.Encoder
+	var enc *json.Encoder
 
 	// Note: this check will fail if running inside Goland (and
 	// other IDEs?) as IsColorTerminal will return false.
-	if jsoncolor.IsColorTerminal(os.Stdout) {
+	if json.IsColorTerminal(os.Stdout) {
 		// Safe to use color
 		out := colorable.NewColorable(os.Stdout) // needed for Windows
-		enc = jsoncolor.NewEncoder(out)
-		enc.SetColors(jsoncolor.DefaultColors())
+		enc = json.NewEncoder(out)
+		enc.SetColors(json.DefaultColors())
 	} else {
 		// Can't use color; but the encoder will still work
-		enc = jsoncolor.NewEncoder(os.Stdout)
+		enc = json.NewEncoder(os.Stdout)
 	}
 
 	m := map[string]interface{}{
