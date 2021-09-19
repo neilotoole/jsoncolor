@@ -9,6 +9,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.8
 	github.com/mattn/go-isatty v0.0.14
+	github.com/nwidger/jsoncolor v0.3.0 // indirect
 	github.com/segmentio/encoding v0.2.20
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/sys v0.0.0-20210915083310-ed5796bab164 // indirect
