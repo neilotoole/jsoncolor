@@ -37,8 +37,8 @@ type Colors struct {
 	Punc Color
 }
 
-// AppendNull appends a colorized "null" to b.
-func (c *Colors) AppendNull(b []byte) []byte {
+// appendNull appends a colorized "null" to b.
+func (c *Colors) appendNull(b []byte) []byte {
 	if c == nil {
 		return append(b, "null"...)
 	}
@@ -48,8 +48,8 @@ func (c *Colors) AppendNull(b []byte) []byte {
 	return append(b, ansiReset...)
 }
 
-// AppendBool appends the colorized bool v to b.
-func (c *Colors) AppendBool(b []byte, v bool) []byte {
+// appendBool appends the colorized bool v to b.
+func (c *Colors) appendBool(b []byte, v bool) []byte {
 	if c == nil {
 		if v {
 			return append(b, "true"...)
@@ -68,8 +68,8 @@ func (c *Colors) AppendBool(b []byte, v bool) []byte {
 	return append(b, ansiReset...)
 }
 
-// AppendKey appends the colorized key v to b.
-func (c *Colors) AppendKey(b []byte, v []byte) []byte {
+// appendKey appends the colorized key v to b.
+func (c *Colors) appendKey(b []byte, v []byte) []byte {
 	if c == nil {
 		return append(b, v...)
 	}
@@ -79,8 +79,8 @@ func (c *Colors) AppendKey(b []byte, v []byte) []byte {
 	return append(b, ansiReset...)
 }
 
-// AppendInt64 appends the colorized int64 v to b.
-func (c *Colors) AppendInt64(b []byte, v int64) []byte {
+// appendInt64 appends the colorized int64 v to b.
+func (c *Colors) appendInt64(b []byte, v int64) []byte {
 	if c == nil {
 		return strconv.AppendInt(b, v, 10)
 	}
@@ -90,8 +90,8 @@ func (c *Colors) AppendInt64(b []byte, v int64) []byte {
 	return append(b, ansiReset...)
 }
 
-// AppendUint64 appends the colorized uint64 v to b.
-func (c *Colors) AppendUint64(b []byte, v uint64) []byte {
+// appendUint64 appends the colorized uint64 v to b.
+func (c *Colors) appendUint64(b []byte, v uint64) []byte {
 	if c == nil {
 		return strconv.AppendUint(b, v, 10)
 	}
@@ -101,8 +101,8 @@ func (c *Colors) AppendUint64(b []byte, v uint64) []byte {
 	return append(b, ansiReset...)
 }
 
-// AppendPunc appends the colorized punctuation mark v to b.
-func (c *Colors) AppendPunc(b []byte, v byte) []byte {
+// appendPunc appends the colorized punctuation mark v to b.
+func (c *Colors) appendPunc(b []byte, v byte) []byte {
 	if c == nil {
 		return append(b, v)
 	}

@@ -120,11 +120,11 @@ const (
 
 // Append acts like Marshal but appends the json representation to b instead of
 // always reallocating a new slice.
-func Append(b []byte, x interface{}, flags AppendFlags, clrs *Colors, indenter *Indenter) ([]byte, error) {
+func Append(b []byte, x interface{}, flags AppendFlags, clrs *Colors, indentr *indenter) ([]byte, error) {
 	if x == nil {
 		// Special case for nil values because it makes the rest of the code
 		// simpler to assume that it won't be seeing nil pointers.
-		return clrs.AppendNull(b), nil
+		return clrs.appendNull(b), nil
 	}
 
 	t := reflect.TypeOf(x)
@@ -137,7 +137,7 @@ func Append(b []byte, x interface{}, flags AppendFlags, clrs *Colors, indenter *
 		c = constructCachedCodec(t, cache)
 	}
 
-	b, err := c.encode(encoder{flags: flags, clrs: clrs, indenter: indenter}, b, p)
+	b, err := c.encode(encoder{flags: flags, clrs: clrs, indentr: indentr}, b, p)
 	runtime.KeepAlive(x)
 	return b, err
 }
@@ -379,8 +379,8 @@ type Encoder struct {
 	buffer   *bytes.Buffer
 	err      error
 	flags    AppendFlags
-	clrs     *Colors
-	indenter *Indenter
+	clrs    *Colors
+	indentr *indenter
 }
 
 // NewEncoder is documented at https://golang.org/pkg/encoding/json/#NewEncoder
@@ -402,7 +402,7 @@ func (enc *Encoder) Encode(v interface{}) error {
 
 	// Note: unlike the original segmentio encoder, indentation is
 	// performed via the Append function.
-	buf.data, err = Append(buf.data[:0], v, enc.flags, enc.clrs, enc.indenter)
+	buf.data, err = Append(buf.data[:0], v, enc.flags, enc.clrs, enc.indentr)
 	if err != nil {
 		encoderBufferPool.Put(buf)
 		return err
@@ -430,7 +430,7 @@ func (enc *Encoder) SetEscapeHTML(on bool) {
 
 // SetIndent is documented at https://golang.org/pkg/encoding/json/#Encoder.SetIndent
 func (enc *Encoder) SetIndent(prefix, indent string) {
-	enc.indenter = NewIndenter(prefix, indent)
+	enc.indentr = newIndenter(prefix, indent)
 }
 
 // SetSortMapKeys is an extension to the standard encoding/json package which
