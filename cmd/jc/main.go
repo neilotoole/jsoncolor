@@ -37,7 +37,7 @@ jc (jsoncolor) is a trivial CLI to demonstrate the neilotoole/jsoncolor package.
 
 Example Usage:
 
-  # Pipe a JSON file, using defaults (colorized and prettyified); print to stdout
+  # Pipe a JSON file, using defaults (colorized and prettified); print to stdout
   $ cat testdata/sakila_actor.json | jc
 
   # Read input from a JSON file, print to stdout, DO colorize but DO NOT prettify
