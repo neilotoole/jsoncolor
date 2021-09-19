@@ -90,8 +90,8 @@ this codebase is quite of out sync by now.
 
 ### Related
 
-- [nwidger/jsoncolor](https://github.com/nwidger/jsoncolor)
-- [hokaccha/go-prettyjson](https://github.com/hokaccha/go-prettyjson)
-- [TylerBrock/colorjson](https://github.com/TylerBrock/colorjson)
+- [`nwidger/jsoncolor`](https://github.com/nwidger/jsoncolor)
+- [`hokaccha/go-prettyjson`](https://github.com/hokaccha/go-prettyjson)
+- [`TylerBrock/colorjson`](https://github.com/TylerBrock/colorjson)
 
 
