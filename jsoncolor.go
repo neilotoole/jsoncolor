@@ -1,15 +1,12 @@
 package jsoncolor
 
 import (
-	"bytes"
 	"io"
 	"os"
 	"strconv"
 
-	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
 
-	//"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/term"
 )
 
@@ -95,44 +92,24 @@ type Color struct {
 	Prefix []byte
 
 	// Suffix is the terminal color code suffix to print after the value (may be empty).
-	Suffix []byte // REVISIT: Can we get rid of this
+	Suffix []byte
 }
 
-// newColor creates a Color instance from a fatih/color instance.
-func newColor(c *color.Color) Color {
-	// Dirty conversion function ahead: print
-	// a space using c, then grab the bytes printed
-	// before and after the space, and those are the
-	// bytes we need for the prefix and suffix.
-
-	if c == nil {
-		return Color{}
-	}
-
-	// Make a copy because the pkg-level color.NoColor could be false.
-	c2 := *c
-	c2.EnableColor()
-
-	b := []byte(c2.Sprint(" "))
-	i := bytes.IndexByte(b, ' ')
-	if i <= 0 {
-		return Color{}
-	}
-
-	return Color{Prefix: b[:i], Suffix: b[i+1:]}
-}
+// reset is the ANSI reset escape code
+const reset = "\x1b[0m"
 
 // DefaultColors returns the default Colors configuration.
+// These colors attempt to follow jq's default colorization.
 func DefaultColors() Colors {
 	return Colors{
-		Null:   newColor(color.New(color.Faint)),
-		Bool:   newColor(color.New(color.Bold)),
-		Number: newColor(color.New(color.FgCyan)),
-		String: newColor(color.New(color.FgGreen)),
-		Key:    newColor(color.New(color.FgBlue, color.Bold)),
-		Bytes:  newColor(color.New(color.Faint)),
-		Time:   newColor(color.New(color.FgGreen, color.Faint)),
-		Punc:   newColor(color.New(color.Bold)),
+		Null:   Color{Prefix: []byte("\x1b[2m"), Suffix: []byte(reset)},
+		Bool:   Color{Prefix: []byte("\x1b[1m"), Suffix: []byte(reset)},
+		Number: Color{Prefix: []byte("\x1b[36m"), Suffix: []byte(reset)},
+		String: Color{Prefix: []byte("\x1b[32m"), Suffix: []byte(reset)},
+		Key:    Color{Prefix: []byte("\x1b[34;1m"), Suffix: []byte(reset)},
+		Bytes:  Color{Prefix: []byte("\x1b[2m"), Suffix: []byte(reset)},
+		Time:   Color{Prefix: []byte("\x1b[32;2m"), Suffix: []byte(reset)},
+		Punc:   Color{Prefix: []byte("\x1b[1m"), Suffix: []byte(reset)},
 	}
 }
 
