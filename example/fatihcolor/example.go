@@ -1,6 +1,6 @@
 // Package main is a trivial program that outputs colorized JSON,
 // demonstrating how to use the fatihcolor helper to build
-// the jsoncolor.Colors struct.
+// the json.Colors struct.
 package main
 
 import (
@@ -9,17 +9,17 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/mattn/go-colorable"
-	"github.com/neilotoole/jsoncolor"
+	json "github.com/neilotoole/jsoncolor"
 
 	"github.com/neilotoole/jsoncolor/helper/fatihcolor"
 )
 
 func main() {
-	var enc *jsoncolor.Encoder
+	var enc *json.Encoder
 
 	// Note: this check will fail if running inside Goland (and
 	// other IDEs?) as IsColorTerminal will return false.
-	if jsoncolor.IsColorTerminal(os.Stdout) {
+	if json.IsColorTerminal(os.Stdout) {
 		fclrs := fatihcolor.DefaultColors()
 
 		// Change some values, just for fun
@@ -28,10 +28,10 @@ func main() {
 
 		clrs := fatihcolor.ToCoreColors(fclrs)
 		out := colorable.NewColorable(os.Stdout)
-		enc = jsoncolor.NewEncoder(out)
+		enc = json.NewEncoder(out)
 		enc.SetColors(clrs)
 	} else {
-		enc = jsoncolor.NewEncoder(os.Stdout)
+		enc = json.NewEncoder(os.Stdout)
 	}
 	enc.SetIndent("", "  ")
 
