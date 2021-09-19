@@ -45,7 +45,7 @@ func (c *Colors) AppendNull(b []byte) []byte {
 
 	b = append(b, c.Null.Prefix...)
 	b = append(b, "null"...)
-	return append(b, c.Null.Suffix...)
+	return append(b, ansiReset...)
 }
 
 // AppendBool appends the colorized bool v to b.
@@ -65,7 +65,7 @@ func (c *Colors) AppendBool(b []byte, v bool) []byte {
 		b = append(b, "false"...)
 	}
 
-	return append(b, c.Bool.Suffix...)
+	return append(b, ansiReset...)
 }
 
 // AppendKey appends the colorized key v to b.
@@ -76,7 +76,7 @@ func (c *Colors) AppendKey(b []byte, v []byte) []byte {
 
 	b = append(b, c.Key.Prefix...)
 	b = append(b, v...)
-	return append(b, c.Key.Suffix...)
+	return append(b, ansiReset...)
 }
 
 // AppendInt64 appends the colorized int64 v to b.
@@ -87,7 +87,7 @@ func (c *Colors) AppendInt64(b []byte, v int64) []byte {
 
 	b = append(b, c.Number.Prefix...)
 	b = strconv.AppendInt(b, v, 10)
-	return append(b, c.Number.Suffix...)
+	return append(b, ansiReset...)
 }
 
 // AppendUint64 appends the colorized uint64 v to b.
@@ -98,7 +98,7 @@ func (c *Colors) AppendUint64(b []byte, v uint64) []byte {
 
 	b = append(b, c.Number.Prefix...)
 	b = strconv.AppendUint(b, v, 10)
-	return append(b, c.Number.Suffix...)
+	return append(b, ansiReset...)
 }
 
 // AppendPunc appends the colorized punctuation mark v to b.
@@ -109,7 +109,7 @@ func (c *Colors) AppendPunc(b []byte, v byte) []byte {
 
 	b = append(b, c.Punc.Prefix...)
 	b = append(b, v)
-	return append(b, c.Punc.Suffix...)
+	return append(b, ansiReset...)
 }
 
 // Color is used to render terminal colors. The Prefix
@@ -122,21 +122,21 @@ type Color struct {
 	Suffix []byte
 }
 
-// reset is the ANSI reset escape code.
-const reset = "\x1b[0m"
+// ansiReset is the ANSI ansiReset escape code.
+const ansiReset = "\x1b[0m"
 
 // DefaultColors returns the default Colors configuration.
 // These colors attempt to follow jq's default colorization.
 func DefaultColors() *Colors {
 	return &Colors{
-		Null:   Color{Prefix: []byte("\x1b[2m"), Suffix: []byte(reset)},
-		Bool:   Color{Prefix: []byte("\x1b[1m"), Suffix: []byte(reset)},
-		Number: Color{Prefix: []byte("\x1b[36m"), Suffix: []byte(reset)},
-		String: Color{Prefix: []byte("\x1b[32m"), Suffix: []byte(reset)},
-		Key:    Color{Prefix: []byte("\x1b[34;1m"), Suffix: []byte(reset)},
-		Bytes:  Color{Prefix: []byte("\x1b[2m"), Suffix: []byte(reset)},
-		Time:   Color{Prefix: []byte("\x1b[32;2m"), Suffix: []byte(reset)},
-		Punc:   Color{Prefix: []byte("\x1b[1m"), Suffix: []byte(reset)},
+		Null:   Color{Prefix: []byte("\x1b[2m"), Suffix: []byte(ansiReset)},
+		Bool:   Color{Prefix: []byte("\x1b[1m"), Suffix: []byte(ansiReset)},
+		Number: Color{Prefix: []byte("\x1b[36m"), Suffix: []byte(ansiReset)},
+		String: Color{Prefix: []byte("\x1b[32m"), Suffix: []byte(ansiReset)},
+		Key:    Color{Prefix: []byte("\x1b[34;1m"), Suffix: []byte(ansiReset)},
+		Bytes:  Color{Prefix: []byte("\x1b[2m"), Suffix: []byte(ansiReset)},
+		Time:   Color{Prefix: []byte("\x1b[32;2m"), Suffix: []byte(ansiReset)},
+		Punc:   Color{Prefix: []byte("\x1b[1m"), Suffix: []byte(ansiReset)},
 	}
 }
 

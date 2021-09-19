@@ -76,7 +76,7 @@ func (e encoder) encodeFloat32(b []byte, p unsafe.Pointer) ([]byte, error) {
 	b = append(b, e.clrs.Number.Prefix...)
 	var err error
 	b, err = e.encodeFloat(b, float64(*(*float32)(p)), 32)
-	b = append(b, e.clrs.Number.Suffix...)
+	b = append(b, ansiReset...)
 	return b, err
 }
 
@@ -88,7 +88,7 @@ func (e encoder) encodeFloat64(b []byte, p unsafe.Pointer) ([]byte, error) {
 	b = append(b, e.clrs.Number.Prefix...)
 	var err error
 	b, err = e.encodeFloat(b, *(*float64)(p), 64)
-	b = append(b, e.clrs.Number.Suffix...)
+	b = append(b, ansiReset...)
 	return b, err
 }
 
@@ -145,7 +145,7 @@ func (e encoder) encodeNumber(b []byte, p unsafe.Pointer) ([]byte, error) {
 
 	b = append(b, e.clrs.Number.Prefix...)
 	b = append(b, n...)
-	b = append(b, e.clrs.Number.Suffix...)
+	b = append(b, ansiReset...)
 	return b, nil
 }
 
@@ -157,7 +157,7 @@ func (e encoder) encodeKey(b []byte, p unsafe.Pointer) ([]byte, error) {
 	b = append(b, e.clrs.Key.Prefix...)
 	var err error
 	b, err = e.doEncodeString(b, p)
-	b = append(b, e.clrs.Key.Suffix...)
+	b = append(b, ansiReset...)
 	return b, err
 }
 
@@ -169,7 +169,7 @@ func (e encoder) encodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 	b = append(b, e.clrs.String.Prefix...)
 	var err error
 	b, err = e.doEncodeString(b, p)
-	b = append(b, e.clrs.String.Suffix...)
+	b = append(b, ansiReset...)
 	return b, err
 }
 
@@ -300,7 +300,7 @@ func (e encoder) encodeBytes(b []byte, p unsafe.Pointer) ([]byte, error) {
 	b = append(b, e.clrs.Bytes.Prefix...)
 	var err error
 	b, err = e.doEncodeBytes(b, p)
-	return append(b, e.clrs.Bytes.Suffix...), err
+	return append(b, ansiReset...), err
 }
 
 func (e encoder) doEncodeBytes(b []byte, p unsafe.Pointer) ([]byte, error) {
@@ -339,7 +339,7 @@ func (e encoder) encodeDuration(b []byte, p unsafe.Pointer) ([]byte, error) {
 	b = append(b, '"')
 	b = appendDuration(b, *(*time.Duration)(p))
 	b = append(b, '"')
-	b = append(b, e.clrs.Time.Suffix...)
+	b = append(b, ansiReset...)
 	return b, nil
 }
 
@@ -357,7 +357,7 @@ func (e encoder) encodeTime(b []byte, p unsafe.Pointer) ([]byte, error) {
 	b = append(b, '"')
 	b = t.AppendFormat(b, time.RFC3339Nano)
 	b = append(b, '"')
-	b = append(b, e.clrs.Time.Suffix...)
+	b = append(b, ansiReset...)
 	return b, nil
 }
 
@@ -714,7 +714,7 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 		} else {
 			b = append(b, e.clrs.Key.Prefix...)
 			b = append(b, k...)
-			b = append(b, e.clrs.Key.Suffix...)
+			b = append(b, ansiReset...)
 		}
 
 		b = append(b, ':')
