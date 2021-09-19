@@ -43,7 +43,7 @@ Example Usage:
   # Read input from a JSON file, print to stdout, DO colorize but DO NOT prettify
   $ jc -c -p=false -i ./testdata/sakila_actor.json 
 
-  # Pipe a JSON input file to jc, outputting to a specified file; and DO NOT prettyify
+  # Pipe a JSON input file to jc, outputting to a specified file; and DO NOT prettify
   $ cat ./testdata/sakila_actor.json | jc -p=false -o /tmp/out.json
 `
 	fmt.Fprintf(os.Stderr, msg)
