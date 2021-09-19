@@ -1,6 +1,6 @@
 # jsoncolor
 
-Package `neilotoole/jsoncolor` provides a replacement for `encoding/json`
+Package `neilotoole/jsoncolor` is a drop-in replacement for `encoding/json`
 that can output colorized JSON.
 
 ![jsoncolor-output](https://github.com/neilotoole/jsoncolor/wiki/images/jsoncolor-example-output.png)
