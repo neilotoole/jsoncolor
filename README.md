@@ -73,7 +73,7 @@ cat ./testdata/sakila_actor.json | jc
 
 ### History
 
-This package is an extract of [`neilotoole/sq`](https://github.com/neilotoole/sq)'s JSON encoding
+This package is an extract of [`sq`](https://github.com/neilotoole/sq)'s JSON encoding
 package, which itself is a fork of the [`segment.io/encoding`](https://github.com/segmentio/encoding) JSON
 encoding package.
 
