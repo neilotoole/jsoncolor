@@ -365,13 +365,13 @@ func (e encoder) encodeArray(b []byte, p unsafe.Pointer, n int, size uintptr, t 
 	var start = len(b)
 	var err error
 
-	b = append(b, '[')
+	b = e.clrs.appendPunc(b, '[')
 
 	if n > 0 {
 		e.indentr.push()
 		for i := 0; i < n; i++ {
 			if i != 0 {
-				b = append(b, ',')
+				b = e.clrs.appendPunc(b, ',')
 			}
 
 			b = e.indentr.appendByte(b, '\n')
@@ -386,7 +386,7 @@ func (e encoder) encodeArray(b []byte, p unsafe.Pointer, n int, size uintptr, t 
 		b = e.indentr.appendIndent(b)
 	}
 
-	b = append(b, ']')
+	b = e.clrs.appendPunc(b, ']')
 
 	return b, nil
 }
@@ -414,7 +414,7 @@ func (e encoder) encodeMap(b []byte, p unsafe.Pointer, t reflect.Type, encodeKey
 
 	var start = len(b)
 	var err error
-	b = append(b, '{')
+	b = e.clrs.appendPunc(b, '{')
 
 	if len(keys) != 0 {
 		b = e.indentr.appendByte(b, '\n')
@@ -424,7 +424,7 @@ func (e encoder) encodeMap(b []byte, p unsafe.Pointer, t reflect.Type, encodeKey
 			v := m.MapIndex(k)
 
 			if i != 0 {
-				b = append(b, ',')
+				b = e.clrs.appendPunc(b, ',')
 				b = e.indentr.appendByte(b, '\n')
 			}
 
@@ -433,7 +433,7 @@ func (e encoder) encodeMap(b []byte, p unsafe.Pointer, t reflect.Type, encodeKey
 				return b[:start], err
 			}
 
-			b = append(b, ':')
+			b = e.clrs.appendPunc(b, ':')
 			b = e.indentr.appendByte(b, ' ')
 
 			if b, err = encodeValue(e, b, (*iface)(unsafe.Pointer(&v)).ptr); err != nil {
@@ -445,7 +445,7 @@ func (e encoder) encodeMap(b []byte, p unsafe.Pointer, t reflect.Type, encodeKey
 		b = e.indentr.appendIndent(b)
 	}
 
-	b = append(b, '}')
+	b = e.clrs.appendPunc(b, '}')
 	return b, nil
 }
 
@@ -476,7 +476,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 	if (e.flags & SortMapKeys) == 0 {
 		// Optimized code path when the program does not need the map keys to be
 		// sorted.
-		b = append(b, '{')
+		b = e.clrs.appendPunc(b, '{')
 
 		if len(m) != 0 {
 			b = e.indentr.appendByte(b, '\n')
@@ -487,7 +487,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 			e.indentr.push()
 			for k, v := range m {
 				if i != 0 {
-					b = append(b, ',')
+					b = e.clrs.appendPunc(b, ',')
 					b = e.indentr.appendByte(b, '\n')
 				}
 
@@ -498,7 +498,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 					return b, err
 				}
 
-				b = append(b, ':')
+				b = e.clrs.appendPunc(b, ':')
 				b = e.indentr.appendByte(b, ' ')
 
 				b, err = Append(b, v, e.flags, e.clrs, e.indentr)
@@ -513,7 +513,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 			b = e.indentr.appendIndent(b)
 		}
 
-		b = append(b, '}')
+		b = e.clrs.appendPunc(b, '}')
 		return b, nil
 	}
 
@@ -528,7 +528,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 
 	var start = len(b)
 	var err error
-	b = append(b, '{')
+	b = e.clrs.appendPunc(b, '{')
 
 	if len(s.elements) > 0 {
 		b = e.indentr.appendByte(b, '\n')
@@ -536,14 +536,14 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 		e.indentr.push()
 		for i, elem := range s.elements {
 			if i != 0 {
-				b = append(b, ',')
+				b = e.clrs.appendPunc(b, ',')
 				b = e.indentr.appendByte(b, '\n')
 			}
 
 			b = e.indentr.appendIndent(b)
 
 			b, _ = e.encodeKey(b, unsafe.Pointer(&elem.key))
-			b = append(b, ':')
+			b = e.clrs.appendPunc(b, ':')
 			b = e.indentr.appendByte(b, ' ')
 
 			b, err = Append(b, elem.val, e.flags, e.clrs, e.indentr)
@@ -567,7 +567,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 		return b[:start], err
 	}
 
-	b = append(b, '}')
+	b = e.clrs.appendPunc(b, '}')
 	return b, nil
 }
 
@@ -580,7 +580,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 	if (e.flags & SortMapKeys) == 0 {
 		// Optimized code path when the program does not need the map keys to be
 		// sorted.
-		b = append(b, '{')
+		b = e.clrs.appendPunc(b, '{')
 
 		if len(m) != 0 {
 			b = e.indentr.appendByte(b, '\n')
@@ -591,7 +591,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 			e.indentr.push()
 			for k, v := range m {
 				if i != 0 {
-					b = append(b, ',')
+					b = e.clrs.appendPunc(b, ',')
 					b = e.indentr.appendByte(b, '\n')
 				}
 
@@ -599,7 +599,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 
 				b, _ = e.encodeKey(b, unsafe.Pointer(&k))
 
-				b = append(b, ':')
+				b = e.clrs.appendPunc(b, ':')
 				b = e.indentr.appendByte(b, ' ')
 
 				b, err = e.encodeRawMessage(b, unsafe.Pointer(&v))
@@ -614,7 +614,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 			b = e.indentr.appendIndent(b)
 		}
 
-		b = append(b, '}')
+		b = e.clrs.appendPunc(b, '}')
 		return b, nil
 	}
 
@@ -629,7 +629,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 
 	var start = len(b)
 	var err error
-	b = append(b, '{')
+	b = e.clrs.appendPunc(b, '{')
 
 	if len(s.elements) > 0 {
 		b = e.indentr.appendByte(b, '\n')
@@ -638,14 +638,14 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 
 		for i, elem := range s.elements {
 			if i != 0 {
-				b = append(b, ',')
+				b = e.clrs.appendPunc(b, ',')
 				b = e.indentr.appendByte(b, '\n')
 			}
 
 			b = e.indentr.appendIndent(b)
 
 			b, _ = e.encodeKey(b, unsafe.Pointer(&elem.key))
-			b = append(b, ':')
+			b = e.clrs.appendPunc(b, ':')
 			b = e.indentr.appendByte(b, ' ')
 
 			b, err = e.encodeRawMessage(b, unsafe.Pointer(&elem.raw))
@@ -669,7 +669,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 		return b[:start], err
 	}
 
-	b = append(b, '}')
+	b = e.clrs.appendPunc(b, '}')
 	return b, nil
 }
 
@@ -679,7 +679,7 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 	var k string
 	var n int
 
-	b = append(b, '{')
+	b = e.clrs.appendPunc(b, '{')
 
 	if len(st.fields) > 0 {
 		b = e.indentr.appendByte(b, '\n')
@@ -696,7 +696,7 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 		}
 
 		if n != 0 {
-			b = append(b, ',')
+			b = e.clrs.appendPunc(b, ',')
 			b = e.indentr.appendByte(b, '\n')
 		}
 
@@ -717,7 +717,7 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 			b = append(b, ansiReset...)
 		}
 
-		b = append(b, ':')
+		b = e.clrs.appendPunc(b, ':')
 
 		b = e.indentr.appendByte(b, ' ')
 
@@ -739,7 +739,7 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 	e.indentr.pop()
 	b = e.indentr.appendIndent(b)
 
-	b = append(b, '}')
+	b = e.clrs.appendPunc(b, '}')
 	return b, nil
 }
 

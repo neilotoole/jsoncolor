@@ -151,9 +151,9 @@ linters-settings:
       hugeParam:
         # size in bytes that makes the warning trigger (default 80)
         sizeThreshold: 80
-      nestingReduce:
-        # min number of statements inside a branch to trigger a warning (default 5)
-        bodyWidth: 5
+#      nestingReduce:
+#        # min number of statements inside a branch to trigger a warning (default 5)
+#        bodyWidth: 5
       rangeExprCopy:
         # size in bytes that makes the warning trigger (default 512)
         sizeThreshold: 512
@@ -164,18 +164,18 @@ linters-settings:
         sizeThreshold: 32
         # whether to check test functions (default true)
         skipTestFuncs: true
-      ruleguard:
-        # path to a gorules file for the ruleguard checker
-        rules: ''
-      truncateCmp:
-        # whether to skip int/uint/uintptr types (default true)
-        skipArchDependent: true
+#      ruleguard:
+#        # path to a gorules file for the ruleguard checker
+#        rules: ''
+#      truncateCmp:
+#        # whether to skip int/uint/uintptr types (default true)
+#        skipArchDependent: true
       underef:
         # whether to skip (*x).method() calls where x is a pointer receiver (default true)
         skipRecvDeref: true
-      unnamedResult:
-        # whether to check exported functions
-        checkExported: true
+#      unnamedResult:
+#        # whether to check exported functions
+#        checkExported: true
 
   gocyclo:
     # minimal code complexity to report, 30 by default (but we recommend 10-20)
@@ -621,6 +621,7 @@ linters:
     - gci
     - gochecknoglobals
     - gochecknoinits
+    - gocritic
     - godox
     - goerr113
     - gofmt

@@ -63,13 +63,6 @@ go install ./cmd/jc
 cat ./testdata/sakila_actor.json | jc
 ```
 
-### Notes
-
-- Given the popularity of the [`fatih/color`](https://github.com/fatih/color) pkg, there is
-  a helper pkg (`jsoncolor/helper/fatihcolor`) to build `jsoncolor` specs
-  from `fatih/color`.
-- Currently the encoder is broken wrt colorization for non-string map keys.
-
 
 ### History
 
@@ -79,6 +72,16 @@ encoding package.
 
 Note that the original `jsoncolor` codebase was forked from Segment's package at `v0.1.14`, so
 this codebase is quite of out sync by now.
+
+### Notes
+
+- Given the popularity of the [`fatih/color`](https://github.com/fatih/color) pkg, there is
+  a helper pkg (`jsoncolor/helper/fatihcolor`) to build `jsoncolor` specs
+  from `fatih/color`.
+- The `.golangci.yml` linter settings have been fiddled with to hush linting issues inherited from
+  the `segmentio` codebase at the time of forking. Thus, the linter report may not be of great use.
+  In an ideal world, the `jsoncolor` functionality would be ported to a more recent (and better-linted)
+  version of the `segementio` codebase.
 
 ### Acknowledgments
 

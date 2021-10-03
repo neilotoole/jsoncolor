@@ -21,7 +21,7 @@ const (
 
 const (
 	escape = '\\'
-	quote  = '"'
+	quote  = '"' //nolint:varcheck // from original code
 )
 
 func skipSpaces(b []byte) []byte {
