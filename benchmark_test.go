@@ -1,6 +1,7 @@
 package jsoncolor_test
 
 import (
+	"bytes"
 	stdj "encoding/json"
 	"io/ioutil"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	segmentj "github.com/segmentio/encoding/json"
 
 	"github.com/neilotoole/jsoncolor"
+	nwidgerj "github.com/nwidger/jsoncolor"
 )
 
 func makeBenchRecs() [][]interface{} {
@@ -35,7 +37,8 @@ func makeBenchRecs() [][]interface{} {
 // - segmentj: the encoder by segment.io
 // - jsoncolor: this fork of segmentj that supports color
 
-func BenchmarkStdj(b *testing.B) {
+func Benchmark_stdlib_NoIndent(b *testing.B) {
+	b.ReportAllocs()
 	recs := makeBenchRecs()
 	b.ResetTimer()
 
@@ -52,7 +55,8 @@ func BenchmarkStdj(b *testing.B) {
 	}
 }
 
-func BenchmarkStdj_Indent(b *testing.B) {
+func Benchmark_stdlib_Indent(b *testing.B) {
+	b.ReportAllocs()
 	recs := makeBenchRecs()
 	b.ResetTimer()
 
@@ -70,7 +74,8 @@ func BenchmarkStdj_Indent(b *testing.B) {
 	}
 }
 
-func BenchmarkSegmentj(b *testing.B) {
+func Benchmark_segmentj_NoIndent(b *testing.B) {
+	b.ReportAllocs()
 	recs := makeBenchRecs()
 	b.ResetTimer()
 
@@ -87,7 +92,8 @@ func BenchmarkSegmentj(b *testing.B) {
 	}
 }
 
-func BenchmarkSegmentj_Indent(b *testing.B) {
+func Benchmark_segmentj_Indent(b *testing.B) {
+	b.ReportAllocs()
 	recs := makeBenchRecs()
 	b.ResetTimer()
 
@@ -104,7 +110,9 @@ func BenchmarkSegmentj_Indent(b *testing.B) {
 		}
 	}
 }
-func BenchmarkJSONColorEnc(b *testing.B) {
+
+func Benchmark_neilotoolejsoncolor_NoIndent(b *testing.B) {
+	b.ReportAllocs()
 	recs := makeBenchRecs()
 	b.ResetTimer()
 
@@ -121,7 +129,8 @@ func BenchmarkJSONColorEnc(b *testing.B) {
 	}
 }
 
-func BenchmarkJSONColor_Indent(b *testing.B) {
+func Benchmark_neilotoolejsoncolor_Indent(b *testing.B) {
+	b.ReportAllocs()
 	recs := makeBenchRecs()
 	b.ResetTimer()
 
@@ -137,4 +146,101 @@ func BenchmarkJSONColor_Indent(b *testing.B) {
 			}
 		}
 	}
+}
+
+func Benchmark_neilotoolejsoncolor_NoIndent_Color(b *testing.B) {
+	b.ReportAllocs()
+	recs := makeBenchRecs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		enc := jsoncolor.NewEncoder(ioutil.Discard)
+		enc.SetEscapeHTML(false)
+		enc.SetColors(jsoncolor.DefaultColors())
+
+		for i := range recs {
+			err := enc.Encode(recs[i])
+			if err != nil {
+				b.Error(err)
+			}
+		}
+	}
+}
+
+func Benchmark_neilotoolejsoncolor_Indent_Color(b *testing.B) {
+	b.ReportAllocs()
+	recs := makeBenchRecs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		enc := jsoncolor.NewEncoder(ioutil.Discard)
+		enc.SetEscapeHTML(false)
+		enc.SetIndent("", "  ")
+		enc.SetColors(jsoncolor.DefaultColors())
+
+		for i := range recs {
+			err := enc.Encode(recs[i])
+			if err != nil {
+				b.Error(err)
+			}
+		}
+	}
+}
+
+func Benchmark_nwidgerjsoncolor_Indent_Color(b *testing.B) {
+	b.ReportAllocs()
+	recs := makeBenchRecs()
+	buf := &bytes.Buffer{}
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		f := newNwidgerFormatter()
+		enc := nwidgerj.NewEncoderWithFormatter(buf, f)
+		enc.SetEscapeHTML(false)
+		enc.SetIndent("", "  ")
+
+		for i := range recs {
+			err := enc.Encode(recs[i])
+			if err != nil {
+				b.Error(err)
+			}
+		}
+	}
+}
+
+func Benchmark_nwidgerjsoncolor_NoIndent_Color(b *testing.B) {
+	b.ReportAllocs()
+	recs := makeBenchRecs()
+	buf := &bytes.Buffer{}
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		f := newNwidgerFormatter()
+		enc := nwidgerj.NewEncoderWithFormatter(buf, f)
+		enc.SetEscapeHTML(false)
+		for i := range recs {
+			err := enc.Encode(recs[i])
+			if err != nil {
+				b.Error(err)
+			}
+		}
+	}
+}
+
+func newNwidgerFormatter() *nwidgerj.Formatter {
+	f := nwidgerj.NewFormatter()
+	f.SpaceColor = nwidgerj.DefaultSpaceColor
+	f.CommaColor = nwidgerj.DefaultCommaColor
+	f.ColonColor = nwidgerj.DefaultColonColor
+	f.ObjectColor = nwidgerj.DefaultObjectColor
+	f.ArrayColor = nwidgerj.DefaultArrayColor
+	f.FieldQuoteColor = nwidgerj.DefaultFieldQuoteColor
+	f.FieldColor = nwidgerj.DefaultFieldColor
+	f.StringQuoteColor = nwidgerj.DefaultStringQuoteColor
+	f.StringColor = nwidgerj.DefaultStringColor
+	f.TrueColor = nwidgerj.DefaultTrueColor
+	f.FalseColor = nwidgerj.DefaultFalseColor
+	f.NumberColor = nwidgerj.DefaultNumberColor
+	f.NullColor = nwidgerj.DefaultNullColor
+	return f
 }
