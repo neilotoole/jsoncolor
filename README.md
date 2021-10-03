@@ -1,9 +1,7 @@
 [![Actions Status](https://github.com/neilotoole/jsoncolor/workflows/Go/badge.svg)](https://github.com/neilotoole/jsoncolor/actions?query=workflow%3AGo)
 [![Go Report Card](https://goreportcard.com/badge/neilotoole/jsoncolor)](https://goreportcard.com/report/neilotoole/jsoncolor)
 [![release](https://img.shields.io/badge/release-v0.2.0-green.svg)](https://github.com/neilotoole/jsoncolor/releases/tag/v0.2.0)
-
-[comment]: <> ([![Coverage]&#40;https://gocover.io/_badge/github.com/neilotoole/errgroup&#41;]&#40;https://gocover.io/github.com/neilotoole/errgroup&#41;)
-[![GoDoc](https://godoc.org/github.com/golang/gddo?status.svg)](https://pkg.go.dev/github.com/neilotoole/jsoncolor)
+[![Go Reference](https://pkg.go.dev/badge/github.com/neilotoole/jsoncolor.svg)](https://pkg.go.dev/github.com/neilotoole/jsoncolor)
 [![license](https://img.shields.io/github/license/neilotoole/jsoncolor)](./LICENSE)
 
 # jsoncolor
