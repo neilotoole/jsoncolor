@@ -10,7 +10,8 @@ import (
 	"golang.org/x/term"
 )
 
-// Colors specifies colorization of JSON output.
+// Colors specifies colorization of JSON output. Each field
+// is a Color, which is simply the bytes of the terminal color code.
 type Colors struct {
 	// Null is the color for JSON nil.
 	Null Color
@@ -33,7 +34,7 @@ type Colors struct {
 	// Time is the color for datetime values.
 	Time Color
 
-	// Punc is the color for JSON punctuation.
+	// Punc is the color for JSON punctuation: []{},: etc.
 	Punc Color
 }
 
@@ -113,15 +114,21 @@ func (c *Colors) appendPunc(b []byte, v byte) []byte {
 }
 
 // Color is used to render terminal colors. In effect, Color is
-// the ANSI prefix code: the prefix is written, then the actual value,
-// then the ANSI reset code.
+// the bytes of the ANSI prefix code. The zero value is valid (results in
+// no colorization). When Color is non-zero, the encoder writes the prefix,
+//then the actual value, then the ANSI reset code.
+//
+// Example value:
+//
+//  number := Color("\x1b[36m")
 type Color []byte
 
 // ansiReset is the ANSI ansiReset escape code.
 const ansiReset = "\x1b[0m"
 
 // DefaultColors returns the default Colors configuration.
-// These colors attempt to follow jq's default colorization.
+// These colors largely follow jq's default colorization,
+// with some deviation.
 func DefaultColors() *Colors {
 	return &Colors{
 		Null:   Color("\x1b[2m"),
@@ -131,7 +138,7 @@ func DefaultColors() *Colors {
 		Key:    Color("\x1b[34;1m"),
 		Bytes:  Color("\x1b[2m"),
 		Time:   Color("\x1b[32;2m"),
-		Punc:   Color{},
+		Punc:   Color{}, // No colorization
 	}
 }
 

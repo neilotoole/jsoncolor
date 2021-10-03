@@ -7,7 +7,13 @@
 # jsoncolor
 
 Package `neilotoole/jsoncolor` is a drop-in replacement for `encoding/json`
-that can output colorized JSON.
+that outputs colorized JSON.
+
+Why? Well, `jq` colorizes its output by default. And at the time this package was
+created, I was not aware of any other JSON colorization package that performed
+colorization in-line in the encoder.
+
+From the example [`jc`](./cmd/jc) app:
 
 ![jsoncolor-output](https://github.com/neilotoole/jsoncolor/wiki/images/jsoncolor-example-output2.png)
 
@@ -33,12 +39,22 @@ import (
 
 func main() {
   var enc *json.Encoder
-  
+
+  // Note: this check will fail if running inside Goland (and
+  // other IDEs?) as IsColorTerminal will return false.
   if json.IsColorTerminal(os.Stdout) {
     // Safe to use color
     out := colorable.NewColorable(os.Stdout) // needed for Windows
     enc = json.NewEncoder(out)
-    enc.SetColors(json.DefaultColors())
+
+    // DefaultColors are similar to jq
+    clrs := json.DefaultColors()
+
+    // Change some values, just for fun
+    clrs.Bool = json.Color("\x1b[36m") // Change the bool color
+    clrs.String = json.Color{}         // Disable the string color
+
+    enc.SetColors(clrs)
   } else {
     // Can't use color; but the encoder will still work
     enc = json.NewEncoder(os.Stdout)
@@ -57,10 +73,73 @@ func main() {
 }
 ```
 
+### Configuration
+
+To enable colorization, invoke `enc.SetColors`.
+
+The `jsoncolor.Colors` struct holds color config. The zero value
+and `nil` are both safe for use (resulting in no colorization).
+
+The `DefaultColors` func returns a `Colors` struct that produces results
+similar to `jq`:
+
+```go
+// DefaultColors returns the default Colors configuration.
+// These colors largely follow jq's default colorization,
+// with some deviation.
+func DefaultColors() *Colors {
+  return &Colors{
+    Null:   Color("\x1b[2m"),
+    Bool:   Color("\x1b[1m"),
+    Number: Color("\x1b[36m"),
+    String: Color("\x1b[32m"),
+    Key:    Color("\x1b[34;1m"),
+    Bytes:  Color("\x1b[2m"),
+    Time:   Color("\x1b[32;2m"),
+    Punc:   Color{}, // No colorization
+  }
+}
+```
+
+As seen above, use the `Color` zero value (`Color{}`) to
+disable colorization for that JSON element.
+
+
+### Helper for `fatih/color`
+
+It can be inconvenient to use terminal codes, e.g. `json.Color("\x1b[36m")`.
+A helper package provides an adapter for the [`fatih/color`](https://github.com/fatih/color) package.
+
+```go
+  // import "github.com/neilotoole/jsoncolor/helper/fatihcolor"
+  // import "github.com/fatih/color"
+
+  out := colorable.NewColorable(os.Stdout) // needed for Windows
+  enc = json.NewEncoder(out)
+
+  fclrs := fatihcolor.DefaultColors()
+  // Change some values, just for fun
+  fclrs.Number = color.New(color.FgBlue)
+  fclrs.String = color.New(color.FgCyan)
+  
+  clrs := fatihcolor.ToCoreColors(fclrs)
+  enc.SetColors(clrs)
+```
+
+### Drop-in for `encoding/json`
+
+This package is a full drop-in for stdlib `encoding/json`
+(thanks to the `segmentio/encoding/json` pkg being a full drop-in).
+
+To drop-in, just use an import alias:
+
+```go
+  import json "github.com/neilotoole/jsoncolor"
+```
 
 ## Example app: `jc`
 
-See `./cmd/jc` for a trivial CLI implementation that can accept JSON input,
+See [`./cmd/jc`](.cmd/jc) for a trivial CLI implementation that can accept JSON input,
 and output that JSON in color.
 
 ```shell
@@ -76,14 +155,11 @@ This package is an extract of [`sq`](https://github.com/neilotoole/sq)'s JSON en
 package, which itself is a fork of the [`segment.io/encoding`](https://github.com/segmentio/encoding) JSON
 encoding package.
 
-Note that the original `jsoncolor` codebase was forked from Segment's package at `v0.1.14`, so
-this codebase is quite of out sync by now.
+Note that the original `jsoncolor` codebase was forked from Segment's codebase at `v0.1.14`, so
+the codebases are quite of out sync by now.
 
 ### Notes
 
-- Given the popularity of the [`fatih/color`](https://github.com/fatih/color) pkg, there is
-  a helper pkg (`jsoncolor/helper/fatihcolor`) to build `jsoncolor` specs
-  from `fatih/color`.
 - The `.golangci.yml` linter settings have been fiddled with to hush linting issues inherited from
   the `segmentio` codebase at the time of forking. Thus, the linter report may not be of great use.
   In an ideal world, the `jsoncolor` functionality would be ported to a more recent (and better-linted)

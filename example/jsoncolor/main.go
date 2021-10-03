@@ -4,9 +4,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/mattn/go-colorable"
 	json "github.com/neilotoole/jsoncolor"
-	"os"
 )
 
 func main() {
@@ -18,7 +19,15 @@ func main() {
 		// Safe to use color
 		out := colorable.NewColorable(os.Stdout) // needed for Windows
 		enc = json.NewEncoder(out)
-		enc.SetColors(json.DefaultColors())
+
+		// DefaultColors are similar to jq
+		clrs := json.DefaultColors()
+
+		// Change some values, just for fun
+		clrs.Bool = json.Color("\x1b[36m") // Change the bool color
+		clrs.String = json.Color{}         // Disable the string color
+
+		enc.SetColors(clrs)
 	} else {
 		// Can't use color; but the encoder will still work
 		enc = json.NewEncoder(os.Stdout)

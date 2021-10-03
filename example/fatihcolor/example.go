@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fatih/color"
 	"github.com/mattn/go-colorable"
+
+	"github.com/fatih/color"
 	json "github.com/neilotoole/jsoncolor"
 
 	"github.com/neilotoole/jsoncolor/helper/fatihcolor"
@@ -20,6 +21,9 @@ func main() {
 	// Note: this check will fail if running inside Goland (and
 	// other IDEs?) as IsColorTerminal will return false.
 	if json.IsColorTerminal(os.Stdout) {
+		out := colorable.NewColorable(os.Stdout)
+		enc = json.NewEncoder(out)
+
 		fclrs := fatihcolor.DefaultColors()
 
 		// Change some values, just for fun
@@ -27,8 +31,6 @@ func main() {
 		fclrs.String = color.New(color.FgCyan)
 
 		clrs := fatihcolor.ToCoreColors(fclrs)
-		out := colorable.NewColorable(os.Stdout)
-		enc = json.NewEncoder(out)
 		enc.SetColors(clrs)
 	} else {
 		enc = json.NewEncoder(os.Stdout)
