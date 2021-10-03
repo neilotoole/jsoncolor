@@ -131,7 +131,7 @@ func DefaultColors() *Colors {
 		Key:    Color("\x1b[34;1m"),
 		Bytes:  Color("\x1b[2m"),
 		Time:   Color("\x1b[32;2m"),
-		Punc:   Color("\x1b[1m"),
+		Punc:   Color{},
 	}
 }
 

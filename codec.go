@@ -1007,7 +1007,7 @@ func uintStringsAreSorted(u0, u1 uint64) bool {
 
 //go:nosplit
 func stringToBytes(s string) []byte {
-	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{ // nolint:govet // from segment's code
 		Data: ((*reflect.StringHeader)(unsafe.Pointer(&s))).Data,
 		Len:  len(s),
 		Cap:  len(s),
