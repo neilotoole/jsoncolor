@@ -165,15 +165,14 @@ Note that this package contains `golang_bench_test.go`, which is inherited from 
 But we're mainly interested in `benchmark_test.go:BenchmarkEncode`, which benchmarks the following:
 
 - Stdlib `encoding/json`: Go 1.16
-- (`segmentj`)[https://github.com/segmentio/encoding]: `v0.1.14`, which was when `jsoncolor` was forked. The newer `segmentj` code performs even better.
+- [`segmentj`](https://github.com/segmentio/encoding): `v0.1.14`, which was when `jsoncolor` was forked. The newer `segmentj` code performs even better.
 - `neilotoole/jsoncolor`: (this package) `v0.2.0`.
-- (`nwidger/jsoncolor`)[https://github.com/nwidger/jsoncolor]: `v0.3.0`, latest at time of benchmarks.
+- [`nwidger/jsoncolor`](https://github.com/nwidger/jsoncolor): `v0.3.0`, latest at time of benchmarks.
 
 Note that two other Go JSON colorization packages ([`hokaccha/go-prettyjson`](https://github.com/hokaccha/go-prettyjson) and
 [`TylerBrock/colorjson`](https://github.com/TylerBrock/colorjson)) are excluded from
 these benchmarks because they do not provide a stdlib-compatible `Encoder` impl.
 
-Results (lightly edited for formatting):
 
 ```
 $ go test -bench=BenchmarkEncode -benchtime="5s"
