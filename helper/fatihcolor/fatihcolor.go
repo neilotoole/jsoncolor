@@ -1,4 +1,4 @@
-// Package fatihcolor provides a bridge between fatih/color
+// Package fatihcolor provides an adapter between fatih/color
 // and neilotoole/jsoncolor's native mechanism. See ToCoreColors.
 package fatihcolor
 
@@ -55,6 +55,10 @@ func DefaultColors() *Colors {
 
 // ToCoreColors converts clrs to a core jsoncolor.Colors instance.
 func ToCoreColors(clrs *Colors) *jsoncolor.Colors {
+	if clrs == nil {
+		return nil
+	}
+
 	return &jsoncolor.Colors{
 		Null:   ToCoreColor(clrs.Null),
 		Bool:   ToCoreColor(clrs.Bool),
@@ -70,15 +74,15 @@ func ToCoreColors(clrs *Colors) *jsoncolor.Colors {
 // ToCoreColor creates a jsoncolor.Color instance from a fatih/color
 // instance.
 func ToCoreColor(c *color.Color) jsoncolor.Color {
-	// Dirty conversion function ahead: print
-	// a space using c, then grab the bytes printed
-	// before the space, as those are the bytes we need for.
-	// There's definitely a better way of doing this, but
-	// it works for now.
-
 	if c == nil {
 		return jsoncolor.Color{}
 	}
+
+	// Dirty conversion function ahead: print
+	// a space using c, then grab the bytes printed
+	// before the space, as those are the bytes we need.
+	// There's definitely a better way of doing this, but
+	// it works for now.
 
 	// Make a copy because the pkg-level color.NoColor could be false.
 	c2 := *c
