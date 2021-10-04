@@ -161,8 +161,8 @@ cat ./testdata/sakila_actor.json | jc
 
 ## Benchmarks
 
-The package contains `golang_bench_test.go`, which is inherited from `segmentj`.
-The test output below is from `BenchmarkEncode`, which benchmarks the following:
+Note that this package contains `golang_bench_test.go`, which is inherited from `segmentj`.
+But we're mainly interested in `benchmark_test.go:BenchmarkEncode`, which benchmarks the following:
 
 - Stdlib `encoding/json`: Go 1.16
 - (`segmentj`)[https://github.com/segmentio/encoding]: `v0.1.14`, which was when `jsoncolor` was forked. The newer `segmentj` code performs even better.
