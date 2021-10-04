@@ -89,16 +89,16 @@ similar to `jq`:
 // These colors largely follow jq's default colorization,
 // with some deviation.
 func DefaultColors() *Colors {
-return &Colors{
-Null:   Color("\x1b[2m"),
-Bool:   Color("\x1b[1m"),
-Number: Color("\x1b[36m"),
-String: Color("\x1b[32m"),
-Key:    Color("\x1b[34;1m"),
-Bytes:  Color("\x1b[2m"),
-Time:   Color("\x1b[32;2m"),
-Punc:   Color{}, // No colorization
-}
+  return &Colors{
+    Null:   Color("\x1b[2m"),
+    Bool:   Color("\x1b[1m"),
+    Number: Color("\x1b[36m"),
+    String: Color("\x1b[32m"),
+    Key:    Color("\x1b[34;1m"),
+    Bytes:  Color("\x1b[2m"),
+    Time:   Color("\x1b[32;2m"),
+    Punc:   Color{}, // No colorization
+  }
 }
 ```
 
@@ -211,6 +211,8 @@ Again, trust these benchmarks at your peril. Create your own benchmarks for your
   version of the `segementio` codebase.
 - The `segmentio` encoder (at least as of `v0.1.14`) encodes `time.Duration` as string, while `stdlib` outputs the `int64`.
   This package follows `stdlib`.
+- The `Colors.Punc` field controls all punctuation colorization, i.e. `[]{},:"`. It is probably worthwhile to separate
+  these out into individually-configurable elements.
 
 ## Acknowledgments
 
