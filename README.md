@@ -164,9 +164,9 @@ cat ./testdata/sakila_actor.json | jc
 Note that this package contains `golang_bench_test.go`, which is inherited from `segmentj`.
 But we're mainly interested in `benchmark_test.go:BenchmarkEncode`, which benchmarks the following:
 
-- Stdlib `encoding/json`: Go 1.16
+- Stdlib `encoding/json`: `go1.17.1`.
 - [`segmentj`](https://github.com/segmentio/encoding): `v0.1.14`, which was when `jsoncolor` was forked. The newer `segmentj` code performs even better.
-- `neilotoole/jsoncolor`: (this package) `v0.2.0`.
+- `neilotoole/jsoncolor`: (this package) `v0.3.2`.
 - [`nwidger/jsoncolor`](https://github.com/nwidger/jsoncolor): `v0.3.0`, latest at time of benchmarks.
 
 Note that two other Go JSON colorization packages ([`hokaccha/go-prettyjson`](https://github.com/hokaccha/go-prettyjson) and
