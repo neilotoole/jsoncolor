@@ -10,9 +10,7 @@ Package `neilotoole/jsoncolor` is a drop-in replacement for `encoding/json`
 that outputs colorized JSON.
 
 Why? Well, `jq` colorizes its output by default, and color output is desirable for
-many Go CLIs. At the time this package was
-created, there didn't seem to be any JSON colorization package that performed
-colorization inline in the encoder.
+many Go CLIs. This package performs colorization (and indentation) inline in the encoder.
 
 From the example [`jc`](./cmd/jc) app:
 
