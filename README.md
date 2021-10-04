@@ -110,7 +110,7 @@ disable colorization for that JSON element.
 ### Helper for `fatih/color`
 
 It can be inconvenient to use terminal codes, e.g. `json.Color("\x1b[36m")`.
-A helper package provides an adapter for the [`fatih/color`](https://github.com/fatih/color) package.
+A helper package provides an adapter for [`fatih/color`](https://github.com/fatih/color).
 
 ```go
   // import "github.com/neilotoole/jsoncolor/helper/fatihcolor"
