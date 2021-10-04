@@ -13,7 +13,7 @@ Why? Well, `jq` colorizes its output by default, and color output is desirable f
 many Go CLIs. This package performs colorization (and indentation) inline in the encoder,
 and is significantly faster than stdlib at indentation.
 
-From the example [`jc`](./cmd/jc) app:
+From the example [`jc`](cmd/jc) app:
 
 ![jsoncolor-output](https://github.com/neilotoole/jsoncolor/wiki/images/jsoncolor-example-output2.png)
 
@@ -150,7 +150,7 @@ the codebases are quite of out sync by now.
 
 ## Example app: `jc`
 
-See [`./cmd/jc`](.cmd/jc) for a trivial CLI implementation that can accept JSON input,
+See [`cmd/jc`](cmd/jc) for a trivial CLI implementation that can accept JSON input,
 and output that JSON in color.
 
 ```shell
