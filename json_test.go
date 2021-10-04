@@ -394,6 +394,7 @@ func TestCodec(t *testing.T) {
 // values.  Therefore, plugging durations into TestCodec would cause fail since
 // it checks equality on the marshaled strings from the two libraries.
 func TestCodecDuration(t *testing.T) {
+	t.Skip("Skipping because neilotoole/jsoncolor follows stdlib (encode to int64) rather than segmentj (encode to string)")
 	for _, v1 := range durationTestValues {
 		t.Run(testName(v1), func(t *testing.T) {
 			v2 := newValue(v1)
