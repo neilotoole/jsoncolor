@@ -328,19 +328,28 @@ func (e encoder) doEncodeBytes(b []byte, p unsafe.Pointer) ([]byte, error) {
 }
 
 func (e encoder) encodeDuration(b []byte, p unsafe.Pointer) ([]byte, error) {
-	if e.clrs == nil {
-		b = append(b, '"')
-		b = appendDuration(b, *(*time.Duration)(p))
-		b = append(b, '"')
-		return b, nil
-	}
+	// NOTE: The segmentj encoder does special handling for time.Duration (converts to string).
+	//  The stdlib encoder does not. It just outputs the int64 value.
+	//  We choose to follow the stdlib pattern, for fuller compatibility.
 
-	b = append(b, e.clrs.Time...)
-	b = append(b, '"')
-	b = appendDuration(b, *(*time.Duration)(p))
-	b = append(b, '"')
-	b = append(b, ansiReset...)
+	b = e.clrs.appendInt64(b, int64(*(*time.Duration)(p)))
 	return b, nil
+
+	// NOTE: if we were to follow the segmentj pattern, we'd execute the code below.
+	//if e.clrs == nil {
+	//	b = append(b, '"')
+	//
+	//	b = appendDuration(b, *(*time.Duration)(p))
+	//	b = append(b, '"')
+	//	return b, nil
+	//}
+	//
+	//b = append(b, e.clrs.Time...)
+	//b = append(b, '"')
+	//b = appendDuration(b, *(*time.Duration)(p))
+	//b = append(b, '"')
+	//b = append(b, ansiReset...)
+	//return b, nil
 }
 
 func (e encoder) encodeTime(b []byte, p unsafe.Pointer) ([]byte, error) {

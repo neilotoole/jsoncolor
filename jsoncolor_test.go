@@ -455,7 +455,7 @@ func TestEncode_BigStruct(t *testing.T) {
 // has a fast path).
 //
 // NOTE: Currently the encoder is broken wrt colors enabled
-//  for non-string map keys.
+//  for non-string map keys, though that is kinda JSON-illegal anyway.
 func TestEncode_Map_Not_StringInterface(t *testing.T) {
 	buf := &bytes.Buffer{}
 	enc := jsoncolor.NewEncoder(buf)
@@ -555,4 +555,21 @@ func newSmallStruct() SmallStruct {
 		FTinyStruct: TinyStruct{FBool: true},
 		FString:     "hello",
 	}
+}
+
+func TestEquivalence(t *testing.T) {
+	rec := makeRecords(t, 1)[0]
+
+	bufStdj := &bytes.Buffer{}
+	err := stdjson.NewEncoder(bufStdj).Encode(rec)
+	require.NoError(t, err)
+
+	bufSegmentj := &bytes.Buffer{}
+	err = json.NewEncoder(bufSegmentj).Encode(rec)
+	require.NoError(t, err)
+	require.NotEqual(t, bufStdj.String(), bufSegmentj.String(), "segmentj encodes time.Duration to string; stdlib does not")
+
+	bufJ := &bytes.Buffer{}
+	err = jsoncolor.NewEncoder(bufJ).Encode(rec)
+	require.Equal(t, bufStdj.String(), bufJ.String())
 }
