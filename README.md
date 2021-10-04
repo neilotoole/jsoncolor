@@ -1,6 +1,6 @@
 [![Actions Status](https://github.com/neilotoole/jsoncolor/workflows/Go/badge.svg)](https://github.com/neilotoole/jsoncolor/actions?query=workflow%3AGo)
 [![Go Report Card](https://goreportcard.com/badge/neilotoole/jsoncolor)](https://goreportcard.com/report/neilotoole/jsoncolor)
-[![release](https://img.shields.io/badge/release-v0.3.2-green.svg)](https://github.com/neilotoole/jsoncolor/releases/tag/v0.2.0)
+[![release](https://img.shields.io/badge/release-v0.3.3-green.svg)](https://github.com/neilotoole/jsoncolor/releases/tag/v0.2.0)
 [![Go Reference](https://pkg.go.dev/badge/github.com/neilotoole/jsoncolor.svg)](https://pkg.go.dev/github.com/neilotoole/jsoncolor)
 [![license](https://img.shields.io/github/license/neilotoole/jsoncolor)](./LICENSE)
 
@@ -166,7 +166,7 @@ But we're mainly interested in `benchmark_test.go:BenchmarkEncode`, which benchm
 
 - Stdlib `encoding/json`: `go1.17.1`.
 - [`segmentj`](https://github.com/segmentio/encoding): `v0.1.14`, which was when `jsoncolor` was forked. The newer `segmentj` code performs even better.
-- `neilotoole/jsoncolor`: (this package) `v0.3.2`.
+- `neilotoole/jsoncolor`: (this package) `v0.3.3`.
 - [`nwidger/jsoncolor`](https://github.com/nwidger/jsoncolor): `v0.3.0`, latest at time of benchmarks.
 
 Note that two other Go JSON colorization packages ([`hokaccha/go-prettyjson`](https://github.com/hokaccha/go-prettyjson) and
