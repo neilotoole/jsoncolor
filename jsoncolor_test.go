@@ -557,8 +557,8 @@ func newSmallStruct() SmallStruct {
 	}
 }
 
-func TestEquivalence(t *testing.T) {
-	rec := makeRecords(t, 1)[0]
+func TestEquivalenceRecords(t *testing.T) {
+	rec := makeRecords(t, 10000)[0]
 
 	bufStdj := &bytes.Buffer{}
 	err := stdjson.NewEncoder(bufStdj).Encode(rec)
