@@ -9,8 +9,9 @@
 Package `neilotoole/jsoncolor` is a drop-in replacement for `encoding/json`
 that outputs colorized JSON.
 
-Why? Well, `jq` colorizes its output by default. And at the time this package was
-created, I was not aware of any other JSON colorization package that performed
+Why? Well, `jq` colorizes its output by default, and color output is desirable for
+many Go CLIs. At the time this package was
+created, there didn't seem to be any JSON colorization package that performed
 colorization inline in the encoder.
 
 From the example [`jc`](./cmd/jc) app:
@@ -90,16 +91,16 @@ similar to `jq`:
 // These colors largely follow jq's default colorization,
 // with some deviation.
 func DefaultColors() *Colors {
-  return &Colors{
-    Null:   Color("\x1b[2m"),
-    Bool:   Color("\x1b[1m"),
-    Number: Color("\x1b[36m"),
-    String: Color("\x1b[32m"),
-    Key:    Color("\x1b[34;1m"),
-    Bytes:  Color("\x1b[2m"),
-    Time:   Color("\x1b[32;2m"),
-    Punc:   Color{}, // No colorization
-  }
+return &Colors{
+Null:   Color("\x1b[2m"),
+Bool:   Color("\x1b[1m"),
+Number: Color("\x1b[36m"),
+String: Color("\x1b[32m"),
+Key:    Color("\x1b[34;1m"),
+Bytes:  Color("\x1b[2m"),
+Time:   Color("\x1b[32;2m"),
+Punc:   Color{}, // No colorization
+}
 }
 ```
 
@@ -114,18 +115,18 @@ A helper package provides an adapter for [`fatih/color`](https://github.com/fati
 
 ```go
   // import "github.com/neilotoole/jsoncolor/helper/fatihcolor"
-  // import "github.com/fatih/color"
+// import "github.com/fatih/color"
 
-  out := colorable.NewColorable(os.Stdout) // needed for Windows
-  enc = json.NewEncoder(out)
+out := colorable.NewColorable(os.Stdout) // needed for Windows
+enc = json.NewEncoder(out)
 
-  fclrs := fatihcolor.DefaultColors()
-  // Change some values, just for fun
-  fclrs.Number = color.New(color.FgBlue)
-  fclrs.String = color.New(color.FgCyan)
-  
-  clrs := fatihcolor.ToCoreColors(fclrs)
-  enc.SetColors(clrs)
+fclrs := fatihcolor.DefaultColors()
+// Change some values, just for fun
+fclrs.Number = color.New(color.FgBlue)
+fclrs.String = color.New(color.FgCyan)
+
+clrs := fatihcolor.ToCoreColors(fclrs)
+enc.SetColors(clrs)
 ```
 
 ### Drop-in for `encoding/json`
