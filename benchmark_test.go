@@ -15,7 +15,7 @@ import (
 )
 
 func BenchmarkEncode(b *testing.B) {
-	recs := makeBenchmarkRecords(b)
+	recs := makeRecords(b, 10000)
 
 	benchmarks := []struct {
 		name   string
@@ -59,35 +59,34 @@ func BenchmarkEncode(b *testing.B) {
 	}
 }
 
-func makeBenchmarkRecords(b *testing.B) [][]interface{} {
-	const maxRecs = 10000
-	recs := make([][]interface{}, 0, maxRecs)
+func makeRecords(tb testing.TB, n int) [][]interface{} {
+	recs := make([][]interface{}, 0, n)
 
 	// add a bunch of data from a file, just to make the recs bigger
 	data, err := ioutil.ReadFile("testdata/sakila_actor.json")
 	if err != nil {
-		b.Fatal(err)
+		tb.Fatal(err)
 	}
 
-	x := new(interface{})
-	if err = stdj.Unmarshal(data, x); err != nil {
-		b.Fatal(err)
+	f := new(interface{})
+	if err = stdj.Unmarshal(data, f); err != nil {
+		tb.Fatal(err)
 	}
 
 	type someStruct struct {
 		i int64
 		a string
-		x interface{}
+		f interface{} // x holds JSON loaded from file
 	}
 
-	for i := 0; i < maxRecs; i++ {
+	for i := 0; i < n; i++ {
 		rec := []interface{}{
 			int(1),
 			int64(2),
 			float32(2.71),
 			float64(3.14),
 			"hello world",
-			someStruct{i: 8, a: "goodbye world", x: x},
+			someStruct{i: 8, a: "goodbye world", f: f},
 			map[string]interface{}{"a": 9, "b": "ca va"},
 			true,
 			false,

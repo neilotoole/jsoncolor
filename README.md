@@ -210,6 +210,8 @@ Again, trust these benchmarks at your peril. Create your own benchmarks for your
   the `segmentio` codebase at the time of forking. Thus, the linter report may not be of great use.
   In an ideal world, the `jsoncolor` functionality would be ported to a more recent (and better-linted)
   version of the `segementio` codebase.
+- The `segmentio` encoder (at least as of `v0.1.14`) encodes `time.Duration` as string, while `stdlib` outputs the `int64`.
+  This package follows `stdlib`.
 
 ## Acknowledgments
 
