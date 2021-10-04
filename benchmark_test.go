@@ -4,39 +4,44 @@ import (
 	"bytes"
 	stdj "encoding/json"
 	"io"
+	"io/ioutil"
 	"testing"
 	"time"
+
+	segmentj "github.com/segmentio/encoding/json"
 
 	"github.com/neilotoole/jsoncolor"
 	nwidgerj "github.com/nwidger/jsoncolor"
 )
 
 func BenchmarkEncode(b *testing.B) {
+	recs := makeBenchmarkRecords(b)
+
 	benchmarks := []struct {
 		name   string
 		indent bool
 		color  bool
 		fn     newEncoderFunc
 	}{
-		{name: "stdlib_indent_no", fn: newEncStdlib},
-		{name: "stdlib_indent_yes", fn: newEncStdlib, indent: true},
-		{name: "segmentj_indent_no", fn: newEncSegmentj},
-		{name: "segmentj_indent_yes", fn: newEncSegmentj, indent: true},
-		{name: "neilotoole_indent_no_color_no", fn: newEncNeilotoole},
-		{name: "neilotoole_indent_yes_color_no", fn: newEncNeilotoole, indent: true},
-		{name: "neilotoole_indent_no_color_yes", fn: newEncNeilotoole, color: true},
-		{name: "neilotoole_indent_yes_color_yes", fn: newEncNeilotoole, indent: true, color: true},
-		{name: "nwidger_indent_no_color_no", fn: newEncNwidger},
-		{name: "nwidger_indent_yes_color_no", fn: newEncNwidger, indent: true},
-		{name: "nwidger_indent_no_color_yes", fn: newEncNwidger, color: true},
-		{name: "nwidger_indent_yes_color_yes", fn: newEncNwidger, indent: true, color: true},
+		{name: "stdlib_NoIndent", fn: newEncStdlib},
+		{name: "stdlib_Indent", fn: newEncStdlib, indent: true},
+		{name: "segmentj_NoIndent", fn: newEncSegmentj},
+		{name: "segmentj_Indent", fn: newEncSegmentj, indent: true},
+		{name: "neilotoole_NoIndent_NoColor", fn: newEncNeilotoole},
+		{name: "neilotoole_Indent_NoColor", fn: newEncNeilotoole, indent: true},
+		{name: "neilotoole_NoIndent_Color", fn: newEncNeilotoole, color: true},
+		{name: "neilotoole_Indent_Color", fn: newEncNeilotoole, indent: true, color: true},
+		{name: "nwidger_NoIndent_NoColor", fn: newEncNwidger},
+		{name: "nwidger_Indent_NoColor", fn: newEncNwidger, indent: true},
+		{name: "nwidger_indent_NoIndent_Colo", fn: newEncNwidger, color: true},
+		{name: "nwidger_indent_Indent_Color", fn: newEncNwidger, indent: true, color: true},
 	}
 
 	for _, bm := range benchmarks {
 		bm := bm
 		b.Run(bm.name, func(b *testing.B) {
 			b.ReportAllocs()
-			recs := makeBenchRecs()
+
 			b.ResetTimer()
 
 			for n := 0; n < b.N; n++ {
@@ -54,13 +59,25 @@ func BenchmarkEncode(b *testing.B) {
 	}
 }
 
-func makeBenchRecs() [][]interface{} {
-	const maxRecs = 20000
+func makeBenchmarkRecords(b *testing.B) [][]interface{} {
+	const maxRecs = 10000
 	recs := make([][]interface{}, 0, maxRecs)
+
+	// add a bunch of data from a file, just to make the recs bigger
+	data, err := ioutil.ReadFile("testdata/sakila_actor.json")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	x := new(interface{})
+	if err = stdj.Unmarshal(data, x); err != nil {
+		b.Fatal(err)
+	}
 
 	type someStruct struct {
 		i int64
 		a string
+		x interface{}
 	}
 
 	for i := 0; i < maxRecs; i++ {
@@ -70,7 +87,7 @@ func makeBenchRecs() [][]interface{} {
 			float32(2.71),
 			float64(3.14),
 			"hello world",
-			someStruct{i: 8, a: "goodbye world"},
+			someStruct{i: 8, a: "goodbye world", x: x},
 			map[string]interface{}{"a": 9, "b": "ca va"},
 			true,
 			false,
@@ -108,7 +125,7 @@ func newEncStdlib(w io.Writer, indent, color bool) encoder {
 }
 
 func newEncSegmentj(w io.Writer, indent, color bool) encoder {
-	enc := stdj.NewEncoder(w)
+	enc := segmentj.NewEncoder(w)
 	if indent {
 		enc.SetIndent("", "  ")
 	}
