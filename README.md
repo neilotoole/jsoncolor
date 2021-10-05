@@ -154,8 +154,8 @@ and output that JSON in color.
 
 ```shell
 # From project root
-go install ./cmd/jc
-cat ./testdata/sakila_actor.json | jc
+$ go install ./cmd/jc
+$ cat ./testdata/sakila_actor.json | jc
 ```
 
 ## Benchmarks
