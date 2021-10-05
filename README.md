@@ -113,19 +113,19 @@ It can be inconvenient to use terminal codes, e.g. `json.Color("\x1b[36m")`.
 A helper package provides an adapter for [`fatih/color`](https://github.com/fatih/color).
 
 ```go
-// import "github.com/neilotoole/jsoncolor/helper/fatihcolor"
-// import "github.com/fatih/color"
-
-out := colorable.NewColorable(os.Stdout) // needed for Windows
-enc = json.NewEncoder(out)
-
-fclrs := fatihcolor.DefaultColors()
-// Change some values, just for fun
-fclrs.Number = color.New(color.FgBlue)
-fclrs.String = color.New(color.FgCyan)
-
-clrs := fatihcolor.ToCoreColors(fclrs)
-enc.SetColors(clrs)
+  // import "github.com/neilotoole/jsoncolor/helper/fatihcolor"
+  // import "github.com/fatih/color"
+  
+  out := colorable.NewColorable(os.Stdout) // needed for Windows
+  enc = json.NewEncoder(out)
+  
+  fclrs := fatihcolor.DefaultColors()
+  // Change some values, just for fun
+  fclrs.Number = color.New(color.FgBlue)
+  fclrs.String = color.New(color.FgCyan)
+  
+  clrs := fatihcolor.ToCoreColors(fclrs)
+  enc.SetColors(clrs)
 ```
 
 ### Drop-in for `encoding/json`
