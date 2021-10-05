@@ -165,7 +165,7 @@ Note that this package contains `golang_bench_test.go`, which is inherited from 
 But we're mainly interested in `benchmark_test.go:BenchmarkEncode`. The results below benchmark
 the following:
 
-- Stdlib `encoding/json`: `go1.17.1`.
+- Stdlib `encoding/json` (results below from `go1.17.1`).
 - [`segmentj`](https://github.com/segmentio/encoding): `v0.1.14`, which was when `jsoncolor` was forked. The newer `segmentj` code performs even better.
 - `neilotoole/jsoncolor`: (this package) `v0.3.3`.
 - [`nwidger/jsoncolor`](https://github.com/nwidger/jsoncolor): `v0.3.0`, latest at time of benchmarks.
@@ -209,7 +209,7 @@ Again, trust these benchmarks at your peril. Create your own benchmarks for your
 
 - The `.golangci.yml` linter settings have been fiddled with to hush linting issues inherited from
   the `segmentio` codebase at the time of forking. Thus, the linter report may not be of great use.
-  In an ideal world, the `jsoncolor` functionality would be [ported](https://github.com/neilotoole/jsoncolor/issues/15)) to a more recent (and better-linted)
+  In an ideal world, the `jsoncolor` functionality would be [ported](https://github.com/neilotoole/jsoncolor/issues/15) to a more recent (and better-linted)
   version of the `segementio` codebase.
 - The `segmentio` encoder (at least as of `v0.1.14`) encodes `time.Duration` as string, while `stdlib` outputs the `int64`.
   This package follows `stdlib`.
