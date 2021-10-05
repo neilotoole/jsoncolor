@@ -74,7 +74,6 @@ func main() {
 ```
 
 
-
 ### Configuration
 
 To enable colorization, invoke `enc.SetColors`.
@@ -165,7 +164,7 @@ Note that this package contains `golang_bench_test.go`, which is inherited from 
 But we're mainly interested in `benchmark_test.go:BenchmarkEncode`. The results below benchmark
 the following:
 
-- Stdlib `encoding/json` (results below from `go1.17.1`).
+- Stdlib `encoding/json` (`go1.17.1`).
 - [`segmentj`](https://github.com/segmentio/encoding): `v0.1.14`, which was when `jsoncolor` was forked. The newer `segmentj` code performs even better.
 - `neilotoole/jsoncolor`: (this package) `v0.3.3`.
 - [`nwidger/jsoncolor`](https://github.com/nwidger/jsoncolor): `v0.3.0`, latest at time of benchmarks.
