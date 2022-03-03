@@ -783,11 +783,52 @@ func (e encoder) encodeUnsupportedTypeError(b []byte, p unsafe.Pointer, t reflec
 	return b, &UnsupportedTypeError{Type: t}
 }
 
+// encodeRawMessage encodes a RawMessage to bytes. Unfortunately, this
+// implementation has a deficiency: it uses Unmarshal to build an
+// object from the RawMessage, which in the case of a struct, results
+// in a map being constructed, and thus the order of the keys is not
+// guaranteed to be maintained. A superior implementation would decode and
+// then re-encode (with color/indentation) the basic JSON tokens on the fly.
+// Note also that if TrustRawMessage is set, and the RawMessage is
+// invalid JSON (cannot be parsed by Unmarshal), then this function
+// falls back to encodeRawMessageNoParseTrusted, which seems to exhibit the
+// correct behavior. It's a bit of a mess, but seems to do the trick.
 func (e encoder) encodeRawMessage(b []byte, p unsafe.Pointer) ([]byte, error) {
 	v := *(*RawMessage)(p)
 
 	if v == nil {
+		return e.clrs.appendNull(b), nil
+	}
 
+	var s []byte
+
+	if (e.flags & TrustRawMessage) != 0 {
+		s = v
+	} else {
+		var err error
+		s, _, err = parseValue(v)
+		if err != nil {
+			return b, &UnsupportedValueError{Value: reflect.ValueOf(v), Str: err.Error()}
+		}
+	}
+
+	var x interface{}
+	if err := Unmarshal(s, &x); err != nil {
+		return e.encodeRawMessageNoParseTrusted(b, p)
+	}
+
+	return Append(b, x, e.flags, e.clrs, e.indentr)
+}
+
+// encodeRawMessageNoParseTrusted is a fallback method that is
+// used by encodeRawMessage if it fails to parse a trusted RawMessage.
+// The (invalid) JSON produced by this method is not colorized.
+// This method may have wonky logic or even bugs in it; little effort
+// has been expended on it because it's a rarely visited edge case.
+func (e encoder) encodeRawMessageNoParseTrusted(b []byte, p unsafe.Pointer) ([]byte, error) {
+	v := *(*RawMessage)(p)
+
+	if v == nil {
 		return e.clrs.appendNull(b), nil
 	}
 
@@ -812,10 +853,7 @@ func (e encoder) encodeRawMessage(b []byte, p unsafe.Pointer) ([]byte, error) {
 	}
 
 	// In order to get the tests inherited from the original segmentio
-	// encoder to work, we need to support indentation. However, due to
-	// the complexity of parsing and then colorizing, we're not going to
-	// go to the effort of adding color support for JSONMarshaler right
-	// now. Possibly revisit this in future if needed.
+	// encoder to work, we need to support indentation.
 
 	// This below is sloppy, but seems to work.
 	if (e.flags & EscapeHTML) != 0 {
@@ -837,6 +875,9 @@ func (e encoder) encodeRawMessage(b []byte, p unsafe.Pointer) ([]byte, error) {
 	return append(b, s...), nil
 }
 
+
+// encodeJSONMarshaler suffers from the same defect as encodeRawMessage; it
+// can result in keys being reordered.
 func (e encoder) encodeJSONMarshaler(b []byte, p unsafe.Pointer, t reflect.Type, pointer bool) ([]byte, error) {
 	v := reflect.NewAt(t, p)
 
@@ -856,44 +897,8 @@ func (e encoder) encodeJSONMarshaler(b []byte, p unsafe.Pointer, t reflect.Type,
 		return b, err
 	}
 
-	s, _, err := parseValue(j)
-	if err != nil {
-		return b, &MarshalerError{Type: t, Err: err}
-	}
-
-	if e.indentr == nil {
-		if (e.flags & EscapeHTML) != 0 {
-			return appendCompactEscapeHTML(b, s), nil
-		}
-
-		return append(b, s...), nil
-	}
-
-	// In order to get the tests inherited from the original segmentio
-	// encoder to work, we need to support indentation. However, due to
-	// the complexity of parsing and then colorizing, we're not going to
-	// go to the effort of supporting color for JSONMarshaler.
-	// Possibly revisit this in future if needed.
-
-	// This below is sloppy, but seems to work.
-	if (e.flags & EscapeHTML) != 0 {
-		s = appendCompactEscapeHTML(nil, s)
-	}
-
-	// The "prefix" arg to Indent is the current indentation.
-	pre := e.indentr.appendIndent(nil)
-
-	buf := &bytes.Buffer{}
-	// And now we just make use of the existing Indent function.
-	err = Indent(buf, s, string(pre), e.indentr.indent)
-	if err != nil {
-		return b, err
-	}
-
-	s = buf.Bytes()
-
-	return append(b, s...), nil
-
+	// We effectively delegate to the encodeRawMessage method.
+	return Append(b, RawMessage(j), e.flags, e.clrs, e.indentr)
 }
 
 func (e encoder) encodeTextMarshaler(b []byte, p unsafe.Pointer, t reflect.Type, pointer bool) ([]byte, error) {
