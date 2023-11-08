@@ -37,19 +37,23 @@ type Colors struct {
 	// Punc is the color for punctuation such as colons, braces, etc.
 	// Frequently Punc will just be color.Bold.
 	Punc *color.Color
+
+	// TextMarshaler is the color for types implementing encoding.TextMarshaler.
+	TextMarshaler *color.Color
 }
 
 // DefaultColors returns default Colors instance.
 func DefaultColors() *Colors {
 	return &Colors{
-		Bool:     color.New(color.FgYellow),
-		Bytes:    color.New(color.Faint),
-		Datetime: color.New(color.FgGreen, color.Faint),
-		Key:      color.New(color.FgBlue, color.Bold),
-		Null:     color.New(color.Faint),
-		Number:   color.New(color.FgCyan),
-		String:   color.New(color.FgGreen),
-		Punc:     color.New(color.Bold),
+		Bool:          color.New(color.FgYellow),
+		Bytes:         color.New(color.Faint),
+		Datetime:      color.New(color.FgGreen, color.Faint),
+		Key:           color.New(color.FgBlue, color.Bold),
+		Null:          color.New(color.Faint),
+		Number:        color.New(color.FgCyan),
+		String:        color.New(color.FgGreen),
+		Punc:          color.New(color.Bold),
+		TextMarshaler: color.New(color.FgGreen),
 	}
 }
 
@@ -60,14 +64,15 @@ func ToCoreColors(clrs *Colors) *jsoncolor.Colors {
 	}
 
 	return &jsoncolor.Colors{
-		Null:   ToCoreColor(clrs.Null),
-		Bool:   ToCoreColor(clrs.Bool),
-		Number: ToCoreColor(clrs.Number),
-		String: ToCoreColor(clrs.String),
-		Key:    ToCoreColor(clrs.Key),
-		Bytes:  ToCoreColor(clrs.Bytes),
-		Time:   ToCoreColor(clrs.Datetime),
-		Punc:   ToCoreColor(clrs.Punc),
+		Null:          ToCoreColor(clrs.Null),
+		Bool:          ToCoreColor(clrs.Bool),
+		Number:        ToCoreColor(clrs.Number),
+		String:        ToCoreColor(clrs.String),
+		Key:           ToCoreColor(clrs.Key),
+		Bytes:         ToCoreColor(clrs.Bytes),
+		Time:          ToCoreColor(clrs.Datetime),
+		Punc:          ToCoreColor(clrs.Punc),
+		TextMarshaler: ToCoreColor(clrs.TextMarshaler),
 	}
 }
 

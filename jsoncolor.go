@@ -36,6 +36,9 @@ type Colors struct {
 
 	// Punc is the color for JSON punctuation: []{},: etc.
 	Punc Color
+
+	// TextMarshaler is the color for values implementing encoding.TextMarshaler.
+	TextMarshaler Color
 }
 
 // appendNull appends a colorized "null" to b.
@@ -131,14 +134,15 @@ const ansiReset = "\x1b[0m"
 // with some deviation.
 func DefaultColors() *Colors {
 	return &Colors{
-		Null:   Color("\x1b[2m"),
-		Bool:   Color("\x1b[1m"),
-		Number: Color("\x1b[36m"),
-		String: Color("\x1b[32m"),
-		Key:    Color("\x1b[34;1m"),
-		Bytes:  Color("\x1b[2m"),
-		Time:   Color("\x1b[32;2m"),
-		Punc:   Color{}, // No colorization
+		Null:          Color("\x1b[2m"),
+		Bool:          Color("\x1b[1m"),
+		Number:        Color("\x1b[36m"),
+		String:        Color("\x1b[32m"),
+		Key:           Color("\x1b[34;1m"),
+		Bytes:         Color("\x1b[2m"),
+		Time:          Color("\x1b[32;2m"),
+		Punc:          Color{},           // No colorization
+		TextMarshaler: Color("\x1b[32m"), // Same as String
 	}
 }
 
