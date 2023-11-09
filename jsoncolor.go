@@ -6,8 +6,6 @@ import (
 	"strconv"
 
 	"github.com/mattn/go-isatty"
-
-	"golang.org/x/term"
 )
 
 // Colors specifies colorization of JSON output. Each field
@@ -149,7 +147,13 @@ func IsColorTerminal(w io.Writer) bool {
 		return false
 	}
 
-	if !isTerminal(w) {
+	f, ok := w.(*os.File)
+	if !ok {
+		return false
+	}
+	fd := f.Fd()
+
+	if !isatty.IsTerminal(fd) {
 		return false
 	}
 
@@ -157,24 +161,9 @@ func IsColorTerminal(w io.Writer) bool {
 		return false
 	}
 
-	f, ok := w.(*os.File)
-	if !ok {
-		return false
-	}
-
-	if isatty.IsCygwinTerminal(f.Fd()) {
+	if isatty.IsCygwinTerminal(fd) {
 		return false
 	}
 
 	return true
-}
-
-// isTerminal returns true if w is a terminal.
-func isTerminal(w io.Writer) bool {
-	switch v := w.(type) {
-	case *os.File:
-		return term.IsTerminal(int(v.Fd()))
-	default:
-		return false
-	}
 }

@@ -13,6 +13,5 @@ require (
 	github.com/segmentio/encoding v0.1.14
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/sys v0.0.0-20210915083310-ed5796bab164 // indirect
-	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
