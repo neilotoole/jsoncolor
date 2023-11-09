@@ -7,8 +7,6 @@ import (
 	"unicode"
 	"unicode/utf16"
 	"unicode/utf8"
-
-	"github.com/segmentio/encoding/ascii"
 )
 
 // All spaces characters defined in the json specification.
@@ -398,7 +396,7 @@ func parseStringFast(b []byte) ([]byte, []byte, bool, error) {
 	if n <= 1 {
 		return nil, b[len(b):], false, syntaxError(b, "missing '\"' at the end of a string value")
 	}
-	if bytes.IndexByte(b[1:n], '\\') < 0 && ascii.ValidPrint(b[1:n]) {
+	if bytes.IndexByte(b[1:n], '\\') < 0 && asciiValidPrint(b[1:n]) {
 		return b[:n], b[n:], false, nil
 	}
 
@@ -706,7 +704,7 @@ func hasLeadingZeroes(b []byte) bool {
 }
 
 func appendToLower(b, s []byte) []byte {
-	if ascii.Valid(s) { // fast path for ascii strings
+	if asciiValid(s) { // fast path for ascii strings
 		i := 0
 
 		for j := range s {
