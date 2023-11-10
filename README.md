@@ -114,6 +114,7 @@ A helper package provides an adapter for [`fatih/color`](https://github.com/fati
 ```go
   // import "github.com/neilotoole/jsoncolor/helper/fatihcolor"
   // import "github.com/fatih/color"
+  // import "github.com/mattn/go-colorable"
   
   out := colorable.NewColorable(os.Stdout) // needed for Windows
   enc = json.NewEncoder(out)
