@@ -6,8 +6,8 @@
 
 # jsoncolor
 
-Package `neilotoole/jsoncolor` is a drop-in replacement for `encoding/json`
-that outputs colorized JSON.
+Package `neilotoole/jsoncolor` is a drop-in replacement for stdlib
+[`encoding/json`](https://pkg.go.dev/encoding/json) that outputs colorized JSON.
 
 Why? Well, [`jq`](https://jqlang.github.io/jq/) colorizes its output by default, and color output
 is desirable for many Go CLIs. This package performs colorization (and indentation) inline
@@ -73,7 +73,6 @@ func main() {
 }
 ```
 
-
 ### Configuration
 
 To enable colorization, invoke [`enc.SetColors`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Encoder.SetColors).
@@ -104,7 +103,6 @@ func DefaultColors() *Colors {
 
 As seen above, use the `Color` zero value (`Color{}`) to
 disable colorization for that JSON element.
-
 
 ### Helper for `fatih/color`
 
@@ -140,8 +138,6 @@ To drop-in, just use an import alias:
   import json "github.com/neilotoole/jsoncolor"
 ```
 
-
-
 ## Example app: `jc`
 
 See [`cmd/jc`](cmd/jc/main.go) for a trivial CLI implementation that can accept JSON input,
@@ -168,7 +164,6 @@ The results below benchmark the following:
 Note that two other Go JSON colorization packages ([`hokaccha/go-prettyjson`](https://github.com/hokaccha/go-prettyjson) and
 [`TylerBrock/colorjson`](https://github.com/TylerBrock/colorjson)) are excluded from
 these benchmarks because they do not provide a stdlib-compatible `Encoder` impl.
-
 
 ```
 $ go test -bench=BenchmarkEncode -benchtime="5s"
@@ -226,7 +221,6 @@ the codebases are quite of out sync by now.
 - [#22](https://github.com/neilotoole/jsoncolor/pull/22): Removed redundant dependencies.
 - [#26](https://github.com/neilotoole/jsoncolor/pull/26): Updated dependencies.
 
-
 ## Acknowledgments
 
 - [`jq`](https://stedolan.github.io/jq/): sine qua non.
@@ -241,5 +235,3 @@ the codebases are quite of out sync by now.
 - [`nwidger/jsoncolor`](https://github.com/nwidger/jsoncolor)
 - [`hokaccha/go-prettyjson`](https://github.com/hokaccha/go-prettyjson)
 - [`TylerBrock/colorjson`](https://github.com/TylerBrock/colorjson)
-
-
