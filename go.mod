@@ -11,7 +11,6 @@ require (
 require (
 	// Only used for test/benchmark/comparision.
 	github.com/nwidger/jsoncolor v0.3.2
-
 	// Only used for test/benchmark/comparision.
 	github.com/segmentio/encoding v0.3.6
 	github.com/stretchr/testify v1.8.4
