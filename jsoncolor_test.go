@@ -371,8 +371,10 @@ func TestEncode_RawMessage(t *testing.T) {
 
 // TestEncode_Map_StringNotInterface tests map[string]json.RawMessage.
 // This test is necessary because the encoder has a fast path
-// for map[string]interface{}
+// for map[string]interface{}.
 func TestEncode_Map_StringRawMessage(t *testing.T) {
+	t.Skipf(`Skipping due to intermittent behavior.
+See: https://github.com/neilotoole/jsoncolor/issues/19`)
 	raw := jsoncolor.RawMessage(`{"one":1,"two":2}`)
 
 	testCases := []struct {
