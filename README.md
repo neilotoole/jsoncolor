@@ -219,7 +219,7 @@ the codebases are quite of out sync by now.
 
 ### v0.7.0 - 2023-11-10
 
-- [#19](https://github.com/neilotoole/jsoncolor/pull/19): Support for [encoding.TextMarshaler](https://pkg.go.dev/encoding#TextMarshaler).
+- [#19](https://github.com/neilotoole/jsoncolor/pull/19): Support for [`encoding.TextMarshaler`](https://pkg.go.dev/encoding#TextMarshaler).
 - [#22](https://github.com/neilotoole/jsoncolor/pull/22): Removed redundant dependencies.
 
 
