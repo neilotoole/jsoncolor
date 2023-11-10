@@ -212,8 +212,8 @@ Again, trust these benchmarks at your peril. Create your own benchmarks for your
 
 History: this package is an extract of [`sq`](https://github.com/neilotoole/sq)'s JSON encoding package, which itself is a fork of the
 [`segmentio/encoding`](https://github.com/segmentio/encoding) JSON encoding package. Note that the
-original `jsoncolor` codebase was forked from Segment's codebase at `v0.1.14`, so
-the codebases are quite of out sync by now.
+original `sq` JSON encoder was forked from Segment's codebase at `v0.1.14`, so
+the codebases have drifted significantly by now.
 
 ### [v0.7.0](https://github.com/neilotoole/jsoncolor/releases/tag/v0.7.0)
 
