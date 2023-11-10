@@ -13,9 +13,9 @@ Why? Well, `jq` colorizes its output by default, and color output is desirable f
 many Go CLIs. This package performs colorization (and indentation) inline in the encoder,
 and is significantly faster than stdlib at indentation.
 
-From the example [`jc`](cmd/jc) app:
+From the example [`jc`](./cmd/jc) app:
 
-![jsoncolor-output](https://github.com/neilotoole/jsoncolor/wiki/images/jsoncolor-example-output2.png)
+![jsoncolor-output](./splash.png)
 
 ## Usage
 
@@ -76,13 +76,13 @@ func main() {
 
 ### Configuration
 
-To enable colorization, invoke `enc.SetColors`.
+To enable colorization, invoke [`enc.SetColors`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Encoder.SetColors).
 
-The `jsoncolor.Colors` struct holds color config. The zero value
-and `nil` are both safe for use (resulting in no colorization).
+The [`jsoncolor.Colors`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Colors) struct
+holds color config. The zero value and `nil` are both safe for use (resulting in no colorization).
 
-The `DefaultColors` func returns a `Colors` struct that produces results
-similar to `jq`:
+The [`DefaultColors`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#DefaultColors) func
+returns a `Colors` struct that produces results similar to `jq`:
 
 ```go
 // DefaultColors returns the default Colors configuration.
@@ -129,8 +129,9 @@ A helper package provides an adapter for [`fatih/color`](https://github.com/fati
 
 ### Drop-in for `encoding/json`
 
-This package is a full drop-in for stdlib `encoding/json`
-(thanks to the `segmentio/encoding/json` pkg being a full drop-in).
+This package is a full drop-in for stdlib [`encoding/json`](https://pkg.go.dev/encoding/json)
+(thanks to the ancestral [`segmentio/encoding/json`](https://pkg.go.dev/github.com/segmentio/encoding/json)
+pkg being a full drop-in).
 
 To drop-in, just use an import alias:
 
@@ -138,14 +139,7 @@ To drop-in, just use an import alias:
   import json "github.com/neilotoole/jsoncolor"
 ```
 
-### History
 
-This package is an extract of [`sq`](https://github.com/neilotoole/sq)'s JSON encoding
-package, which itself is a fork of the [`segment.io/encoding`](https://github.com/segmentio/encoding) JSON
-encoding package (aka `segmentj`).
-
-Note that the original `jsoncolor` codebase was forked from Segment's codebase at `v0.1.14`, so
-the codebases are quite of out sync by now.
 
 ## Example app: `jc`
 
@@ -164,7 +158,7 @@ Note that this package contains `golang_bench_test.go`, which is inherited from 
 But we're mainly interested in `benchmark_test.go:BenchmarkEncode`. The results below benchmark
 the following:
 
-- Stdlib `encoding/json` (`go1.17.1`).
+- Stdlib [`encoding/json`](https://pkg.go.dev/encoding/json) (`go1.17.1`).
 - [`segmentj`](https://github.com/segmentio/encoding): `v0.1.14`, which was when `jsoncolor` was forked. The newer `segmentj` code performs even better.
 - `neilotoole/jsoncolor`: (this package) `v0.6.0`.
 - [`nwidger/jsoncolor`](https://github.com/nwidger/jsoncolor): `v0.3.0`, latest at time of benchmarks.
@@ -210,10 +204,24 @@ Again, trust these benchmarks at your peril. Create your own benchmarks for your
   the `segmentio` codebase at the time of forking. Thus, the linter report may not be of great use.
   In an ideal world, the `jsoncolor` functionality would be [ported](https://github.com/neilotoole/jsoncolor/issues/15) to a more recent (and better-linted)
   version of the `segementio` codebase.
-- The `segmentio` encoder (at least as of `v0.1.14`) encodes `time.Duration` as string, while `stdlib` outputs the `int64`.
+- The `segmentio` encoder (at least as of `v0.1.14`) encodes `time.Duration` as string, while `stdlib` outputs as `int64`.
   This package follows `stdlib`.
 - The `Colors.Punc` field controls all punctuation colorization, i.e. `[]{},:"`. It is probably worthwhile to [separate](https://github.com/neilotoole/jsoncolor/issues/16)
   these out into individually-configurable elements.
+
+<a name="history"></a>
+## CHANGELOG
+
+History: this package is an extract of [`sq`](https://github.com/neilotoole/sq)'s JSON encoding package, which itself is a fork of the
+[`segmentio/encoding`](https://github.com/segmentio/encoding) JSON encoding package. Note that the
+original `jsoncolor` codebase was forked from Segment's codebase at `v0.1.14`, so
+the codebases are quite of out sync by now.
+
+### v0.7.0 - 2023-11-10
+
+- [#19](https://github.com/neilotoole/jsoncolor/pull/19): Support for [encoding.TextMarshaler](https://pkg.go.dev/encoding#TextMarshaler).
+- [#22](https://github.com/neilotoole/jsoncolor/pull/22): Removed redundant dependencies.
+
 
 ## Acknowledgments
 
@@ -222,9 +230,12 @@ Again, trust these benchmarks at your peril. Create your own benchmarks for your
 - [`sq`](https://github.com/neilotoole/sq): `jsoncolor` is effectively an extract of the code created specifically for `sq`.
 - [`mattn/go-colorable`](https://github.com/mattn/go-colorable): no project is complete without `mattn` having played a role.
 - [`fatih/color`](https://github.com/fatih/color): the color library.
+- [`@hermannm`](https://github.com/hermannm): for several PRs.
 
 ### Related
 
 - [`nwidger/jsoncolor`](https://github.com/nwidger/jsoncolor)
 - [`hokaccha/go-prettyjson`](https://github.com/hokaccha/go-prettyjson)
 - [`TylerBrock/colorjson`](https://github.com/TylerBrock/colorjson)
+
+
