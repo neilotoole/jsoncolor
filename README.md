@@ -1,6 +1,6 @@
 [![Actions Status](https://github.com/neilotoole/jsoncolor/workflows/Go/badge.svg)](https://github.com/neilotoole/jsoncolor/actions?query=workflow%3AGo)
 [![Go Report Card](https://goreportcard.com/badge/neilotoole/jsoncolor)](https://goreportcard.com/report/neilotoole/jsoncolor)
-[![release](https://img.shields.io/badge/release-v0.6.0-green.svg)](https://github.com/neilotoole/jsoncolor/releases/tag/v0.6.0)
+[![release](https://img.shields.io/badge/release-v0.7.0-green.svg)](https://github.com/neilotoole/jsoncolor/releases/tag/v0.7.0)
 [![Go Reference](https://pkg.go.dev/badge/github.com/neilotoole/jsoncolor.svg)](https://pkg.go.dev/github.com/neilotoole/jsoncolor)
 [![license](https://img.shields.io/github/license/neilotoole/jsoncolor)](./LICENSE)
 
@@ -13,7 +13,7 @@ Why? Well, [`jq`](https://jqlang.github.io/jq/) colorizes its output by default,
 is desirable for many Go CLIs. This package performs colorization (and indentation) inline
 in the encoder, and is significantly faster than stdlib at indentation.
 
-From the example [`jc`](./cmd/jc) app:
+From the example [`jc`](./cmd/jc/main.go) app:
 
 ![jsoncolor-output](./splash.png)
 
@@ -78,7 +78,7 @@ func main() {
 
 To enable colorization, invoke [`enc.SetColors`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Encoder.SetColors).
 
-The [`jsoncolor.Colors`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Colors) struct
+The [`Colors`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Colors) struct
 holds color config. The zero value and `nil` are both safe for use (resulting in no colorization).
 
 The [`DefaultColors`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#DefaultColors) func
@@ -206,7 +206,8 @@ Again, trust these benchmarks at your peril. Create your own benchmarks for your
   version of the `segementio` codebase.
 - The `segmentio` encoder (at least as of `v0.1.14`) encodes `time.Duration` as string, while `stdlib` outputs as `int64`.
   This package follows `stdlib`.
-- The `Colors.Punc` field controls all punctuation colorization, i.e. `[]{},:"`. It is probably worthwhile to [separate](https://github.com/neilotoole/jsoncolor/issues/16)
+- The [`Colors.Punc`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Colors) field controls all
+  punctuation colorization, i.e. `[]{},:"`. It is probably worthwhile to [separate](https://github.com/neilotoole/jsoncolor/issues/16)
   these out into individually-configurable elements.
 
 <a name="history"></a>
