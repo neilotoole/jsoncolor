@@ -9,9 +9,9 @@
 Package `neilotoole/jsoncolor` is a drop-in replacement for `encoding/json`
 that outputs colorized JSON.
 
-Why? Well, `jq` colorizes its output by default, and color output is desirable for
-many Go CLIs. This package performs colorization (and indentation) inline in the encoder,
-and is significantly faster than stdlib at indentation.
+Why? Well, [`jq`](https://jqlang.github.io/jq/) colorizes its output by default, and color output
+is desirable for many Go CLIs. This package performs colorization (and indentation) inline
+in the encoder, and is significantly faster than stdlib at indentation.
 
 From the example [`jc`](./cmd/jc) app:
 
@@ -143,7 +143,7 @@ To drop-in, just use an import alias:
 
 ## Example app: `jc`
 
-See [`cmd/jc`](cmd/jc) for a trivial CLI implementation that can accept JSON input,
+See [`cmd/jc`](cmd/jc/main.go) for a trivial CLI implementation that can accept JSON input,
 and output that JSON in color.
 
 ```shell
@@ -217,10 +217,11 @@ History: this package is an extract of [`sq`](https://github.com/neilotoole/sq)'
 original `jsoncolor` codebase was forked from Segment's codebase at `v0.1.14`, so
 the codebases are quite of out sync by now.
 
-### v0.7.0 - 2023-11-10
+### [v0.7.0](https://github.com/neilotoole/jsoncolor/releases/tag/v0.7.0)
 
 - [#19](https://github.com/neilotoole/jsoncolor/pull/19): Support for [`encoding.TextMarshaler`](https://pkg.go.dev/encoding#TextMarshaler).
 - [#22](https://github.com/neilotoole/jsoncolor/pull/22): Removed redundant dependencies.
+- [#26](https://github.com/neilotoole/jsoncolor/pull/26): Updated dependencies.
 
 
 ## Acknowledgments
