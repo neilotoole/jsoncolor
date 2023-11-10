@@ -573,3 +573,26 @@ func TestEquivalenceRecords(t *testing.T) {
 	err = jsoncolor.NewEncoder(bufJ).Encode(rec)
 	require.Equal(t, bufStdj.String(), bufJ.String())
 }
+
+// TextMarshaler implements encoding.TextMarshaler
+type TextMarshaler struct {
+	Text string
+}
+
+func (t TextMarshaler) MarshalText() ([]byte, error) {
+	return []byte(t.Text), nil
+}
+
+func TestEncode_TextMarshaler(t *testing.T) {
+	buf := &bytes.Buffer{}
+	enc := jsoncolor.NewEncoder(buf)
+	enc.SetColors(&jsoncolor.Colors{
+		TextMarshaler: jsoncolor.Color("\x1b[36m"),
+	})
+
+	text := TextMarshaler{Text: "example text"}
+
+	require.NoError(t, enc.Encode(text))
+	require.Equal(t, "\x1b[36m\"example text\"\x1b[0m\n", buf.String(),
+		"expected TextMarshaler encoding to use Colors.TextMarshaler")
+}

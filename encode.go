@@ -911,7 +911,7 @@ func (e encoder) encodeTextMarshaler(b []byte, p unsafe.Pointer, t reflect.Type,
 	switch v.Kind() {
 	case reflect.Ptr, reflect.Interface:
 		if v.IsNil() {
-			return append(b, `null`...), nil
+			return e.clrs.appendNull(b), nil
 		}
 	}
 
@@ -920,7 +920,14 @@ func (e encoder) encodeTextMarshaler(b []byte, p unsafe.Pointer, t reflect.Type,
 		return b, err
 	}
 
-	return e.doEncodeString(b, unsafe.Pointer(&s))
+	if e.clrs == nil {
+		return e.doEncodeString(b, unsafe.Pointer(&s))
+	}
+
+	b = append(b, e.clrs.TextMarshaler...)
+	b, err = e.doEncodeString(b, unsafe.Pointer(&s))
+	b = append(b, ansiReset...)
+	return b, err
 }
 
 func appendCompactEscapeHTML(dst []byte, src []byte) []byte {
