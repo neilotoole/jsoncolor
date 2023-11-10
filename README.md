@@ -197,10 +197,10 @@ Again, trust these benchmarks at your peril. Create your own benchmarks for your
 
 ## Notes
 
-- The `.golangci.yml` linter settings have been fiddled with to hush linting issues inherited from
-  the `segmentio` codebase at the time of forking. Thus, the linter report may not be of great use.
-  In an ideal world, the `jsoncolor` functionality would be [ported](https://github.com/neilotoole/jsoncolor/issues/15) to a more recent (and better-linted)
-  version of the `segementio` codebase.
+- The [`.golangci.yml`](./.golangci.yml) linter settings have been fiddled with to hush some
+  linting issues inherited from the `segmentio` codebase at the time of forking. Thus, the linter report
+  may not be of great use. In an ideal world, the `jsoncolor` functionality would be [ported](https://github.com/neilotoole/jsoncolor/issues/15) to a
+  more recent (and better-linted) version of the `segementio` codebase.
 - The `segmentio` encoder (at least as of `v0.1.14`) encodes `time.Duration` as string, while `stdlib` outputs as `int64`.
   This package follows `stdlib`.
 - The [`Colors.Punc`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Colors) field controls all
