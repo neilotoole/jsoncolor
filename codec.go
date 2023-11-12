@@ -3,6 +3,7 @@ package jsoncolor
 import (
 	"encoding"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -984,8 +985,8 @@ func objectKeyError(b []byte, err error) ([]byte, error) {
 	if len(b) == 0 {
 		return nil, unexpectedEOF(b)
 	}
-	switch err.(type) {
-	case *UnmarshalTypeError:
+	var e *UnmarshalTypeError
+	if errors.As(err, &e) {
 		err = syntaxError(b, "invalid character '%c' looking for beginning of object key", b[0])
 	}
 	return b, err
