@@ -729,7 +729,7 @@ func appendToLower(b, s []byte) []byte {
 
 func foldRune(r rune) rune {
 	if r = unicode.SimpleFold(r); 'A' <= r && r <= 'Z' {
-		r = r + ('a' - 'A')
+		r += 'a' - 'A'
 	}
 	return r
 }

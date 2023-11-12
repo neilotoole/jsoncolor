@@ -117,11 +117,11 @@ func (c *Colors) appendPunc(b []byte, v byte) []byte {
 // Color is used to render terminal colors. In effect, Color is
 // the bytes of the ANSI prefix code. The zero value is valid (results in
 // no colorization). When Color is non-zero, the encoder writes the prefix,
-//then the actual value, then the ANSI reset code.
+// then the actual value, then the ANSI reset code.
 //
 // Example value:
 //
-//  number := Color("\x1b[36m")
+//	number := Color("\x1b[36m")
 type Color []byte
 
 // ansiReset is the ANSI ansiReset escape code.

@@ -112,7 +112,7 @@ func constructCodec(t reflect.Type, seen map[reflect.Type]*structType, canAddr b
 	}
 
 	if c.encode != nil {
-		return
+		return c
 	}
 
 	switch t.Kind() {
@@ -208,7 +208,7 @@ func constructCodec(t reflect.Type, seen map[reflect.Type]*structType, canAddr b
 		c.decode = constructTextUnmarshalerDecodeFunc(t, true)
 	}
 
-	return
+	return c
 }
 
 func constructStringCodec(t reflect.Type, seen map[reflect.Type]*structType, canAddr bool) codec {
@@ -795,13 +795,13 @@ func constructInlineValueEncodeFunc(encode encodeFunc) encodeFunc {
 //go:nosplit
 func noescape(p unsafe.Pointer) unsafe.Pointer {
 	x := uintptr(p)
-	return unsafe.Pointer(x ^ 0)
+	return unsafe.Pointer(x)
 }
 
 func alignedSize(t reflect.Type) uintptr {
 	a := t.Align()
 	s := t.Size()
-	return align(uintptr(a), uintptr(s))
+	return align(uintptr(a), s)
 }
 
 func align(align, size uintptr) uintptr {
@@ -1010,7 +1010,7 @@ func uintStringsAreSorted(u0, u1 uint64) bool {
 
 //go:nosplit
 func stringToBytes(s string) []byte {
-	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{ // nolint:govet // from segment's code
+	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{ //nolint:govet // from segment's code
 		Data: ((*reflect.StringHeader)(unsafe.Pointer(&s))).Data,
 		Len:  len(s),
 		Cap:  len(s),
@@ -1149,17 +1149,17 @@ func appendDuration(b []byte, d time.Duration) []byte {
 func fmtFrac(buf []byte, v uint64, prec int) (nw int, nv uint64) {
 	// Omit trailing zeros up to and including decimal point.
 	w := len(buf)
-	print := false
+	printEnabled := false
 	for i := 0; i < prec; i++ {
 		digit := v % 10
-		print = print || digit != 0
-		if print {
+		printEnabled = printEnabled || digit != 0
+		if printEnabled {
 			w--
 			buf[w] = byte(digit) + '0'
 		}
 		v /= 10
 	}
-	if print {
+	if printEnabled {
 		w--
 		buf[w] = '.'
 	}

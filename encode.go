@@ -195,28 +195,28 @@ func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 			b = append(b, s[i:j]...)
 			b = append(b, '\\', c)
 			i = j + 1
-			j = j + 1
+			j = i
 			continue
 
 		case '\n':
 			b = append(b, s[i:j]...)
 			b = append(b, '\\', 'n')
 			i = j + 1
-			j = j + 1
+			j = i
 			continue
 
 		case '\r':
 			b = append(b, s[i:j]...)
 			b = append(b, '\\', 'r')
 			i = j + 1
-			j = j + 1
+			j = i
 			continue
 
 		case '\t':
 			b = append(b, s[i:j]...)
 			b = append(b, '\\', 't')
 			i = j + 1
-			j = j + 1
+			j = i
 			continue
 
 		case '<', '>', '&':
@@ -224,7 +224,7 @@ func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 			b = append(b, `\u00`...)
 			b = append(b, hex[c>>4], hex[c&0xF])
 			i = j + 1
-			j = j + 1
+			j = i
 			continue
 		}
 
@@ -234,7 +234,7 @@ func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 			b = append(b, `\u00`...)
 			b = append(b, hex[c>>4], hex[c&0xF])
 			i = j + 1
-			j = j + 1
+			j = i
 			continue
 		}
 
@@ -244,7 +244,7 @@ func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 			b = append(b, s[i:j]...)
 			b = append(b, `\ufffd`...)
 			i = j + size
-			j = j + size
+			j = i
 			continue
 		}
 
@@ -261,7 +261,7 @@ func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 			b = append(b, `\u202`...)
 			b = append(b, hex[r&0xF])
 			i = j + size
-			j = j + size
+			j = i
 			continue
 		}
 
@@ -336,20 +336,20 @@ func (e encoder) encodeDuration(b []byte, p unsafe.Pointer) ([]byte, error) {
 	return b, nil
 
 	// NOTE: if we were to follow the segmentj pattern, we'd execute the code below.
-	//if e.clrs == nil {
-	//	b = append(b, '"')
+	// if e.clrs == nil {
+	// 	b = append(b, '"')
 	//
-	//	b = appendDuration(b, *(*time.Duration)(p))
-	//	b = append(b, '"')
-	//	return b, nil
-	//}
+	// 	b = appendDuration(b, *(*time.Duration)(p))
+	// 	b = append(b, '"')
+	// 	return b, nil
+	// }
 	//
-	//b = append(b, e.clrs.Time...)
-	//b = append(b, '"')
-	//b = appendDuration(b, *(*time.Duration)(p))
-	//b = append(b, '"')
-	//b = append(b, ansiReset...)
-	//return b, nil
+	// b = append(b, e.clrs.Time...)
+	// b = append(b, '"')
+	// b = appendDuration(b, *(*time.Duration)(p))
+	// b = append(b, '"')
+	// b = append(b, ansiReset...)
+	// return b, nil
 }
 
 func (e encoder) encodeTime(b []byte, p unsafe.Pointer) ([]byte, error) {
@@ -874,7 +874,6 @@ func (e encoder) encodeRawMessageNoParseTrusted(b []byte, p unsafe.Pointer) ([]b
 
 	return append(b, s...), nil
 }
-
 
 // encodeJSONMarshaler suffers from the same defect as encodeRawMessage; it
 // can result in keys being reordered.
