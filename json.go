@@ -3,6 +3,7 @@ package jsoncolor
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"reflect"
 	"runtime"
@@ -194,7 +195,8 @@ func MarshalIndent(x interface{}, prefix, indent string) ([]byte, error) {
 func Unmarshal(b []byte, x interface{}) error {
 	r, err := Parse(b, x, 0)
 	if len(r) != 0 {
-		if _, ok := err.(*SyntaxError); !ok {
+		var e *SyntaxError
+		if !errors.As(err, &e) {
 			// The encoding/json package prioritizes reporting errors caused by
 			// unexpected trailing bytes over other issues; here we emulate this
 			// behavior by overriding the error.
@@ -296,7 +298,7 @@ func (dec *Decoder) readValue() (v []byte, err error) {
 		}
 
 		if err = dec.err; err != nil {
-			if len(dec.remain) != 0 && err == io.EOF {
+			if len(dec.remain) != 0 && errors.Is(err, io.EOF) {
 				err = io.ErrUnexpectedEOF
 			}
 			return v, err
@@ -321,7 +323,7 @@ func (dec *Decoder) readValue() (v []byte, err error) {
 			if err != nil {
 				err = nil
 			}
-		} else if err == io.ErrUnexpectedEOF {
+		} else if errors.Is(err, io.ErrUnexpectedEOF) {
 			err = io.EOF
 		}
 		dec.remain, n = skipSpacesN(dec.buffer)

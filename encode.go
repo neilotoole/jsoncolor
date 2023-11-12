@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding"
 	"encoding/base64"
+	"errors"
 	"math"
 	"reflect"
 	"sort"
@@ -731,7 +732,7 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 		b = e.indentr.appendByte(b, ' ')
 
 		if b, err = f.codec.encode(e, b, v); err != nil {
-			if err == (rollback{}) {
+			if errors.Is(err, rollback{}) {
 				b = b[:lengthBeforeKey]
 				continue
 			}
