@@ -372,7 +372,7 @@ func (e encoder) encodeTime(b []byte, p unsafe.Pointer) ([]byte, error) {
 }
 
 func (e encoder) encodeArray(b []byte, p unsafe.Pointer, n int, size uintptr, _ reflect.Type, encode encodeFunc) ([]byte, error) {
-	var start = len(b)
+	start := len(b)
 	var err error
 
 	b = e.clrs.appendPunc(b, '[')
@@ -422,7 +422,7 @@ func (e encoder) encodeMap(b []byte, p unsafe.Pointer, t reflect.Type, encodeKey
 		sortKeys(keys)
 	}
 
-	var start = len(b)
+	start := len(b)
 	var err error
 	b = e.clrs.appendPunc(b, '{')
 
@@ -493,7 +493,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 			b = e.indentr.appendByte(b, '\n')
 
 			var err error
-			var i = 0
+			i := 0
 
 			e.indentr.push()
 			for k, v := range m {
@@ -537,7 +537,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 	}
 	sort.Sort(s)
 
-	var start = len(b)
+	start := len(b)
 	var err error
 	b = e.clrs.appendPunc(b, '{')
 
@@ -598,7 +598,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 			b = e.indentr.appendByte(b, '\n')
 
 			var err error
-			var i = 0
+			i := 0
 
 			e.indentr.push()
 			for k := range m {
@@ -640,7 +640,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 	}
 	sort.Sort(s)
 
-	var start = len(b)
+	start := len(b)
 	var err error
 	b = e.clrs.appendPunc(b, '{')
 
@@ -688,10 +688,10 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 }
 
 func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byte, error) {
-	var start = len(b)
 	var err error
 	var k string
 	var n int
+	start := len(b)
 
 	b = e.clrs.appendPunc(b, '{')
 
@@ -934,7 +934,7 @@ func (e encoder) encodeTextMarshaler(b []byte, p unsafe.Pointer, t reflect.Type,
 	return b, err
 }
 
-func appendCompactEscapeHTML(dst []byte, src []byte) []byte {
+func appendCompactEscapeHTML(dst, src []byte) []byte {
 	start := 0
 	escape := false
 	inString := false

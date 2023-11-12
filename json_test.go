@@ -605,7 +605,6 @@ func TestDecodeLines(t *testing.T) {
 		reader      io.Reader
 		expectCount int
 	}{
-
 		// simple
 
 		{
@@ -1192,7 +1191,7 @@ func BenchmarkEasyjsonUnmarshalSmallStruct(b *testing.B) {
 		UserMentions []*string `json:"user_mentions"`
 	}
 
-	var json = []byte(`{"hashtags":[{"indices":[5, 10],"text":"some-text"}],"urls":[],"user_mentions":[]}`)
+	json := []byte(`{"hashtags":[{"indices":[5, 10],"text":"some-text"}],"urls":[],"user_mentions":[]}`)
 
 	for i := 0; i < b.N; i++ {
 		var value Entities
@@ -1337,10 +1336,12 @@ func (*intPtrB) MarshalText() ([]byte, error) {
 	return []byte("B"), nil
 }
 
-type structA struct{ I intPtrA }
-type structB struct{ I intPtrB }
-type structC struct{ M Marshaler }
-type structD struct{ M encoding.TextMarshaler }
+type (
+	structA struct{ I intPtrA }
+	structB struct{ I intPtrB }
+	structC struct{ M Marshaler }
+	structD struct{ M encoding.TextMarshaler }
+)
 
 func TestGithubIssue16(t *testing.T) {
 	// https://github.com/segmentio/encoding/issues/16
@@ -1489,9 +1490,9 @@ func TestGithubIssue23(t *testing.T) {
 
 		b, _ := Marshal(C{
 			C: map[string]B{
-				"1": B{
+				"1": {
 					B: map[string]A{
-						"2": A{
+						"2": {
 							A: map[string]string{"3": "!"},
 						},
 					},
@@ -1517,7 +1518,7 @@ func TestGithubIssue26(t *testing.T) {
 	type interfaceType interface{}
 
 	var value interfaceType
-	var data = []byte(`{}`)
+	data := []byte(`{}`)
 
 	if err := Unmarshal(data, &value); err != nil {
 		t.Error(err)
@@ -1534,7 +1535,6 @@ func TestGithubIssue28(t *testing.T) {
 	} else if string(b) != `{"err":{}}` {
 		t.Error(string(b))
 	}
-
 }
 
 func TestSetTrustRawMessage(t *testing.T) {

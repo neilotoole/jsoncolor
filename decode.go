@@ -563,10 +563,8 @@ func (d decoder) decodeArray(b []byte, p unsafe.Pointer, n int, size uintptr, t 
 	}
 }
 
-var (
-	// This is a placeholder used to consturct non-nil empty slices.
-	empty struct{}
-)
+// This is a placeholder used to consturct non-nil empty slices.
+var empty struct{}
 
 func (d decoder) decodeSlice(b []byte, p unsafe.Pointer, size uintptr, t reflect.Type, decode decodeFunc) ([]byte, error) {
 	if hasNullPrefix(b) {
@@ -748,7 +746,7 @@ func (d decoder) decodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 	var err error
 	var key string
 	var val interface{}
-	var input = b
+	input := b
 
 	b = b[1:]
 	for {
@@ -830,7 +828,7 @@ func (d decoder) decodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 	var err error
 	var key string
 	var val RawMessage
-	var input = b
+	input := b
 
 	b = b[1:]
 	for {
@@ -909,7 +907,7 @@ func (d decoder) decodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 	// memory buffer used to convert short field names to lowercase
 	var buf [64]byte
 	var key []byte
-	var input = b
+	input := b
 
 	b = b[1:]
 	for {
