@@ -947,26 +947,12 @@ func unexpectedEOF(b []byte) error {
 	return syntaxError(b, "unexpected end of JSON input")
 }
 
-var syntaxErrorMsgOffset = ^uintptr(0)
-
-func init() {
-	t := reflect.TypeOf(SyntaxError{})
-	for i, n := 0, t.NumField(); i < n; i++ {
-		if f := t.Field(i); f.Type.Kind() == reflect.String {
-			syntaxErrorMsgOffset = f.Offset
-		}
-	}
-}
-
 func syntaxError(b []byte, msg string, args ...interface{}) error {
 	e := new(SyntaxError)
-	i := syntaxErrorMsgOffset
-	if i != ^uintptr(0) {
-		s := "json: " + fmt.Sprintf(msg, args...) + ": " + prefix(b)
-		p := unsafe.Pointer(e)
-		// Hack to set the unexported `msg` field.
-		*(*string)(unsafe.Pointer(uintptr(p) + i)) = s
-	}
+	s := "json: " + fmt.Sprintf(msg, args...) + ": " + prefix(b)
+	p := unsafe.Pointer(e)
+	// Hack to set the unexported `msg` field.
+	*(*string)(p) = s
 	return e
 }
 
