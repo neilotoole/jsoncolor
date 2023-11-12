@@ -16,7 +16,7 @@ import (
 
 const hex = "0123456789abcdef"
 
-func (e encoder) encodeNull(b []byte, p unsafe.Pointer) ([]byte, error) {
+func (e encoder) encodeNull(b []byte, _ unsafe.Pointer) ([]byte, error) {
 	return e.clrs.appendNull(b), nil
 }
 
@@ -370,7 +370,7 @@ func (e encoder) encodeTime(b []byte, p unsafe.Pointer) ([]byte, error) {
 	return b, nil
 }
 
-func (e encoder) encodeArray(b []byte, p unsafe.Pointer, n int, size uintptr, t reflect.Type, encode encodeFunc) ([]byte, error) {
+func (e encoder) encodeArray(b []byte, p unsafe.Pointer, n int, size uintptr, _ reflect.Type, encode encodeFunc) ([]byte, error) {
 	var start = len(b)
 	var err error
 
@@ -756,7 +756,7 @@ type rollback struct{}
 
 func (rollback) Error() string { return "rollback" }
 
-func (e encoder) encodeEmbeddedStructPointer(b []byte, p unsafe.Pointer, t reflect.Type, unexported bool, offset uintptr, encode encodeFunc) ([]byte, error) {
+func (e encoder) encodeEmbeddedStructPointer(b []byte, p unsafe.Pointer, _ reflect.Type, _ bool, offset uintptr, encode encodeFunc) ([]byte, error) {
 	p = *(*unsafe.Pointer)(p)
 	if p == nil {
 		return b, rollback{}
@@ -764,7 +764,7 @@ func (e encoder) encodeEmbeddedStructPointer(b []byte, p unsafe.Pointer, t refle
 	return encode(e, b, unsafe.Pointer(uintptr(p)+offset))
 }
 
-func (e encoder) encodePointer(b []byte, p unsafe.Pointer, t reflect.Type, encode encodeFunc) ([]byte, error) {
+func (e encoder) encodePointer(b []byte, p unsafe.Pointer, _ reflect.Type, encode encodeFunc) ([]byte, error) {
 	if p = *(*unsafe.Pointer)(p); p != nil {
 		return encode(e, b, p)
 	}
@@ -779,7 +779,7 @@ func (e encoder) encodeMaybeEmptyInterface(b []byte, p unsafe.Pointer, t reflect
 	return Append(b, reflect.NewAt(t, p).Elem().Interface(), e.flags, e.clrs, e.indentr)
 }
 
-func (e encoder) encodeUnsupportedTypeError(b []byte, p unsafe.Pointer, t reflect.Type) ([]byte, error) {
+func (e encoder) encodeUnsupportedTypeError(b []byte, _ unsafe.Pointer, t reflect.Type) ([]byte, error) {
 	return b, &UnsupportedTypeError{Type: t}
 }
 

@@ -13,7 +13,7 @@ import (
 	"unsafe"
 )
 
-func (d decoder) decodeNull(b []byte, p unsafe.Pointer) ([]byte, error) {
+func (d decoder) decodeNull(b []byte, _ unsafe.Pointer) ([]byte, error) {
 	if hasNullPrefix(b) {
 		return b[4:], nil
 	}
@@ -1105,7 +1105,7 @@ func (d decoder) decodeMaybeEmptyInterface(b []byte, p unsafe.Pointer, t reflect
 	return d.decodeUnmarshalTypeError(b, p, t)
 }
 
-func (d decoder) decodeUnmarshalTypeError(b []byte, p unsafe.Pointer, t reflect.Type) ([]byte, error) {
+func (d decoder) decodeUnmarshalTypeError(b []byte, _ unsafe.Pointer, t reflect.Type) ([]byte, error) {
 	v, b, err := parseValue(b)
 	if err != nil {
 		return b, err

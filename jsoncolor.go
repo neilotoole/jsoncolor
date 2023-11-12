@@ -71,7 +71,7 @@ func (c *Colors) appendBool(b []byte, v bool) []byte {
 }
 
 // appendKey appends the colorized key v to b.
-func (c *Colors) appendKey(b []byte, v []byte) []byte {
+func (c *Colors) appendKey(b, v []byte) []byte { //nolint:unused
 	if c == nil {
 		return append(b, v...)
 	}

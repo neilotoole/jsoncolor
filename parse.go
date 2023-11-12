@@ -18,8 +18,8 @@ const (
 )
 
 const (
-	escape = '\\'
-	quote  = '"' //nolint:varcheck // from original code
+	escape = '\\' //nolint:unused
+	quote  = '"'  //nolint:varcheck,unused // from original code
 )
 
 func skipSpaces(b []byte) []byte {
