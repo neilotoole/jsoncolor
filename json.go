@@ -409,8 +409,8 @@ func (enc *Encoder) Encode(v interface{}) error {
 	buf.data = append(buf.data, '\n')
 	b := buf.data
 
-	if _, err := enc.writer.Write(b); err != nil {
-		enc.err = err
+	if _, err2 := enc.writer.Write(b); err2 != nil {
+		enc.err = err2
 	}
 
 	encoderBufferPool.Put(buf)

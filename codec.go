@@ -584,7 +584,7 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 			}
 		}
 
-		codec := constructCodec(f.Type, seen, canAddr)
+		c := constructCodec(f.Type, seen, canAddr)
 
 		if stringify {
 			// https://golang.org/pkg/encoding/json/#Marshal
@@ -612,19 +612,19 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 				reflect.Uint16,
 				reflect.Uint32,
 				reflect.Uint64:
-				codec.encode = constructStringEncodeFunc(codec.encode)
-				codec.decode = constructStringToIntDecodeFunc(typ, codec.decode)
+				c.encode = constructStringEncodeFunc(c.encode)
+				c.decode = constructStringToIntDecodeFunc(typ, c.decode)
 			case reflect.Bool,
 				reflect.Float32,
 				reflect.Float64,
 				reflect.String:
-				codec.encode = constructStringEncodeFunc(codec.encode)
-				codec.decode = constructStringDecodeFunc(codec.decode)
+				c.encode = constructStringEncodeFunc(c.encode)
+				c.decode = constructStringDecodeFunc(c.decode)
 			}
 		}
 
 		fields = append(fields, structField{
-			codec:     codec,
+			codec:     c,
 			offset:    offset + f.Offset,
 			empty:     emptyFuncOf(f.Type),
 			tag:       tag,

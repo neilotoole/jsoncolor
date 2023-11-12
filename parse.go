@@ -69,8 +69,8 @@ func parseInt(b []byte, t reflect.Type) (int64, []byte, error) {
 		for _, d := range b[1:] {
 			if !(d >= '0' && d <= '9') {
 				if count == 0 {
-					b, err := inputError(b, t)
-					return 0, b, err
+					bs, err := inputError(b, t)
+					return 0, bs, err
 				}
 				break
 			}
@@ -102,8 +102,8 @@ func parseInt(b []byte, t reflect.Type) (int64, []byte, error) {
 		for _, d := range b {
 			if !(d >= '0' && d <= '9') {
 				if count == 0 {
-					b, err := inputError(b, t)
-					return 0, b, err
+					bs, err := inputError(b, t)
+					return 0, bs, err
 				}
 				break
 			}
@@ -155,8 +155,8 @@ func parseUint(b []byte, t reflect.Type) (uint64, []byte, error) {
 	for _, d := range b {
 		if !(d >= '0' && d <= '9') {
 			if count == 0 {
-				b, err := inputError(b, t)
-				return 0, b, err
+				bs, err := inputError(b, t)
+				return 0, bs, err
 			}
 			break
 		}

@@ -373,8 +373,9 @@ func (d decoder) decodeFromStringToInt(b []byte, p unsafe.Pointer, t reflect.Typ
 		v = append(u, v[i:]...)
 	}
 
-	if r, err := decode(d, v, p); err != nil {
-		if _, isSyntaxError := err.(*SyntaxError); isSyntaxError {
+	if r, err0 := decode(d, v, p); err0 != nil {
+		var e *SyntaxError
+		if errors.As(err0, &e) {
 			if hasPrefix(v, "-") {
 				// The standard library interprets sequences of '-' characters
 				// as numbers but still returns type errors in this case...
@@ -384,14 +385,14 @@ func (d decoder) decodeFromStringToInt(b []byte, p unsafe.Pointer, t reflect.Typ
 		}
 		// When the input value was a valid number representation we retain the
 		// error returned by the decoder.
-		if _, _, err := parseNumber(v); err != nil {
+		if _, _, err1 := parseNumber(v); err1 != nil {
 			// When the input value valid JSON we mirror the behavior of the
 			// encoding/json package and return a generic error.
-			if _, _, err := parseValue(v); err == nil {
+			if _, _, err2 := parseValue(v); err2 == nil {
 				return b, fmt.Errorf("json: invalid use of ,string struct tag, trying to unmarshal %q into int", prefix(v))
 			}
 		}
-		return b, err
+		return b, err0
 	} else if len(r) != 0 {
 		return r, unmarshalTypeError(v, t)
 	}
@@ -630,8 +631,8 @@ func (d decoder) decodeSlice(b []byte, p unsafe.Pointer, size uintptr, t reflect
 
 		b, err = decode(d, b, unsafe.Pointer(uintptr(s.data)+(uintptr(s.len)*size)))
 		if err != nil {
-			if _, r, err := parseValue(input); err != nil {
-				return r, err
+			if _, r, err0 := parseValue(input); err0 != nil {
+				return r, err0
 			} else {
 				b = r
 			}
@@ -709,8 +710,8 @@ func (d decoder) decodeMap(b []byte, p unsafe.Pointer, t, kt, vt reflect.Type, k
 		b = skipSpaces(b[1:])
 
 		if b, err = decodeValue(d, b, vptr); err != nil {
-			if _, r, err := parseValue(input); err != nil {
-				return r, err
+			if _, r, err0 := parseValue(input); err0 != nil {
+				return r, err0
 			} else {
 				b = r
 			}
@@ -790,8 +791,8 @@ func (d decoder) decodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 
 		b, err = d.decodeInterface(b, unsafe.Pointer(&val))
 		if err != nil {
-			if _, r, err := parseValue(input); err != nil {
-				return r, err
+			if _, r, err0 := parseValue(input); err0 != nil {
+				return r, err0
 			} else {
 				b = r
 			}
@@ -871,8 +872,8 @@ func (d decoder) decodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 
 		b, err = d.decodeRawMessage(b, unsafe.Pointer(&val))
 		if err != nil {
-			if _, r, err := parseValue(input); err != nil {
-				return r, err
+			if _, r, err2 := parseValue(input); err2 != nil {
+				return r, err2
 			} else {
 				b = r
 			}
@@ -961,8 +962,8 @@ func (d decoder) decodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 		}
 
 		if b, err = f.codec.decode(d, b, unsafe.Pointer(uintptr(p)+f.offset)); err != nil {
-			if _, r, err := parseValue(input); err != nil {
-				return r, err
+			if _, r, err2 := parseValue(input); err2 != nil {
+				return r, err2
 			} else {
 				b = r
 			}
@@ -1023,11 +1024,11 @@ func (d decoder) decodeInterface(b []byte, p unsafe.Pointer) ([]byte, error) {
 			}
 		}
 
-		b, err := Parse(b, val, d.flags)
+		parsedBytes, err := Parse(b, val, d.flags)
 		if err == nil {
 			*(*interface{})(p) = val
 		}
-		return b, err
+		return parsedBytes, err
 	}
 
 	v, b, err := parseValue(b)
