@@ -1,11 +1,7 @@
 package jsoncolor
 
 import (
-	"io"
-	"os"
 	"strconv"
-
-	"github.com/mattn/go-isatty"
 )
 
 // Colors specifies colorization of JSON output. Each field
@@ -142,32 +138,4 @@ func DefaultColors() *Colors {
 		Punc:          Color{},           // No colorization
 		TextMarshaler: Color("\x1b[32m"), // Same as String
 	}
-}
-
-// IsColorTerminal returns true if w is a colorable terminal.
-func IsColorTerminal(w io.Writer) bool {
-	// This logic could be pretty dodgy; use at your own risk.
-	if w == nil {
-		return false
-	}
-
-	f, ok := w.(*os.File)
-	if !ok {
-		return false
-	}
-	fd := f.Fd()
-
-	if !isatty.IsTerminal(fd) {
-		return false
-	}
-
-	if os.Getenv("TERM") == "dumb" {
-		return false
-	}
-
-	if isatty.IsCygwinTerminal(fd) {
-		return false
-	}
-
-	return true
 }
