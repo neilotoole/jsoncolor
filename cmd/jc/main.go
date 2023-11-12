@@ -6,9 +6,8 @@
 //
 // Examples:
 //
-//  $ cat example.json | jc
-//  $ cat example.json | jc -c false
-
+//	$ cat example.json | jc
+//	$ cat example.json | jc -c false
 package main
 
 import (
