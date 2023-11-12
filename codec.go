@@ -499,16 +499,16 @@ func constructEmbeddedStructPointerDecodeFunc(t reflect.Type, unexported bool, o
 	}
 }
 
-func appendStructFields(fields []structField, t reflect.Type, offset uintptr, seen map[reflect.Type]*structType, canAddr bool) []structField {
-	type embeddedField struct {
-		index      int
-		offset     uintptr
-		pointer    bool
-		unexported bool
-		subtype    *structType
-		subfield   *structField
-	}
+type embeddedField struct {
+	index      int
+	offset     uintptr
+	pointer    bool
+	unexported bool
+	subtype    *structType
+	subfield   *structField
+}
 
+func appendStructFields(fields []structField, t reflect.Type, offset uintptr, seen map[reflect.Type]*structType, canAddr bool) []structField {
 	names := make(map[string]struct{})
 	embedded := make([]embeddedField, 0, 10)
 
@@ -516,12 +516,12 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 		f := t.Field(i)
 
 		var (
-			name       = f.Name
-			anonymous  = f.Anonymous
-			tag        = false
-			omitempty  = false
-			stringify  = false
-			unexported = len(f.PkgPath) != 0
+			name             = f.Name
+			anonymous        = f.Anonymous
+			isTag            = false
+			omitempty        = false
+			stringifyEnabled = false
+			unexported       = len(f.PkgPath) != 0
 		)
 
 		if unexported && !anonymous { // unexported
@@ -530,7 +530,7 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 
 		if parts := strings.Split(f.Tag.Get("json"), ","); len(parts) != 0 {
 			if len(parts[0]) != 0 {
-				name, tag = parts[0], true
+				name, isTag = parts[0], true
 			}
 
 			if name == "-" && len(parts) == 1 { // ignored
@@ -546,12 +546,12 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 				case "omitempty":
 					omitempty = true
 				case "string":
-					stringify = true
+					stringifyEnabled = true
 				}
 			}
 		}
 
-		if anonymous && !tag { // embedded
+		if anonymous && !isTag { // embedded
 			typ := f.Type
 			ptr := f.Type.Kind() == reflect.Ptr
 
@@ -587,48 +587,15 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 
 		c := constructCodec(f.Type, seen, canAddr)
 
-		if stringify {
-			// https://golang.org/pkg/encoding/json/#Marshal
-			//
-			// The "string" option signals that a field is stored as JSON inside
-			// a JSON-encoded string. It applies only to fields of string,
-			// floating point, integer, or boolean types. This extra level of
-			// encoding is sometimes used when communicating with JavaScript
-			// programs:
-			typ := f.Type
-
-			if typ.Kind() == reflect.Ptr {
-				typ = typ.Elem()
-			}
-
-			switch typ.Kind() {
-			case reflect.Int,
-				reflect.Int8,
-				reflect.Int16,
-				reflect.Int32,
-				reflect.Int64,
-				reflect.Uint,
-				reflect.Uintptr,
-				reflect.Uint8,
-				reflect.Uint16,
-				reflect.Uint32,
-				reflect.Uint64:
-				c.encode = constructStringEncodeFunc(c.encode)
-				c.decode = constructStringToIntDecodeFunc(typ, c.decode)
-			case reflect.Bool,
-				reflect.Float32,
-				reflect.Float64,
-				reflect.String:
-				c.encode = constructStringEncodeFunc(c.encode)
-				c.decode = constructStringDecodeFunc(c.decode)
-			}
+		if stringifyEnabled {
+			c = stringify(&f, c)
 		}
 
 		fields = append(fields, structField{
 			codec:     c,
 			offset:    offset + f.Offset,
 			empty:     emptyFuncOf(f.Type),
-			tag:       tag,
+			tag:       isTag,
 			omitempty: omitempty,
 			name:      name,
 			index:     i << 32,
@@ -640,22 +607,7 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 	}
 
 	// Only unambiguous embedded fields must be serialized.
-	ambiguousNames := make(map[string]int)
-	ambiguousTags := make(map[string]int)
-
-	// Embedded types can never override a field that was already present at
-	// the top-level.
-	for name := range names {
-		ambiguousNames[name]++
-		ambiguousTags[name]++
-	}
-
-	for _, embfield := range embedded {
-		ambiguousNames[embfield.subfield.name]++
-		if embfield.subfield.tag {
-			ambiguousTags[embfield.subfield.name]++
-		}
-	}
+	ambiguousNames, ambiguousTags := ambiguousNameTagCnt(names, embedded)
 
 	for _, embfield := range embedded {
 		subfield := *embfield.subfield
@@ -688,6 +640,66 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 
 	sort.Slice(fields, func(i, j int) bool { return fields[i].index < fields[j].index })
 	return fields
+}
+
+func ambiguousNameTagCnt(names map[string]struct{}, embedded []embeddedField) (map[string]int, map[string]int) {
+	ambiguousNames := make(map[string]int)
+	ambiguousTags := make(map[string]int)
+
+	// Embedded types can never override a field that was already present at
+	// the top-level.
+	for name := range names {
+		ambiguousNames[name]++
+		ambiguousTags[name]++
+	}
+
+	for _, embfield := range embedded {
+		ambiguousNames[embfield.subfield.name]++
+		if embfield.subfield.tag {
+			ambiguousTags[embfield.subfield.name]++
+		}
+	}
+
+	return ambiguousNames, ambiguousTags
+}
+
+func stringify(f *reflect.StructField, c codec) codec {
+	// https://golang.org/pkg/encoding/json/#Marshal
+	//
+	// The "string" option signals that a field is stored as JSON inside
+	// a JSON-encoded string. It applies only to fields of string,
+	// floating point, integer, or boolean types. This extra level of
+	// encoding is sometimes used when communicating with JavaScript
+	// programs:
+	typ := f.Type
+
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+
+	switch typ.Kind() {
+	case reflect.Int,
+		reflect.Int8,
+		reflect.Int16,
+		reflect.Int32,
+		reflect.Int64,
+		reflect.Uint,
+		reflect.Uintptr,
+		reflect.Uint8,
+		reflect.Uint16,
+		reflect.Uint32,
+		reflect.Uint64:
+		c.encode = constructStringEncodeFunc(c.encode)
+		c.decode = constructStringToIntDecodeFunc(typ, c.decode)
+	case reflect.Bool,
+		reflect.Float32,
+		reflect.Float64,
+		reflect.String:
+		c.encode = constructStringEncodeFunc(c.encode)
+		c.decode = constructStringDecodeFunc(c.decode)
+	}
+
+	return c
 }
 
 func encodeString(s string, flags AppendFlags) string {
