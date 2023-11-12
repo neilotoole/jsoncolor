@@ -215,6 +215,10 @@ History: this package is an extract of [`sq`](https://github.com/neilotoole/sq)'
 original `sq` JSON encoder was forked from Segment's codebase at `v0.1.14`, so
 the codebases have drifted significantly by now.
 
+### [v0.7.1](https://github.com/neilotoole/jsoncolor/releases/tag/v0.7.1)
+
+- [#27](https://github.com/neilotoole/jsoncolor/pull/27): Improved Windows terminal color support checking.
+
 ### [v0.7.0](https://github.com/neilotoole/jsoncolor/releases/tag/v0.7.0)
 
 - [#21](https://github.com/neilotoole/jsoncolor/pull/21): Support for [`encoding.TextMarshaler`](https://pkg.go.dev/encoding#TextMarshaler).
