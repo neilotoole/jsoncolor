@@ -736,57 +736,28 @@ func (d decoder) decodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 		return inputError(b, mapStringInterfaceType)
 	}
 
-	i := 0
 	m := *(*map[string]interface{})(p)
-
 	if m == nil {
 		m = make(map[string]interface{}, 64)
 	}
 
-	var err error
-	var key string
-	var val interface{}
 	input := b
-
 	b = b[1:]
-	for {
-		key = ""
-		val = nil
+	for i := 0; ; i++ {
+		var key string
+		var val interface{}
+		var err error
 
 		b = skipSpaces(b)
-
 		if len(b) != 0 && b[0] == '}' {
 			*(*unsafe.Pointer)(p) = *(*unsafe.Pointer)(unsafe.Pointer(&m))
 			return b[1:], nil
 		}
 
-		if i != 0 {
-			if len(b) == 0 {
-				return b, syntaxError(b, "unexpected end of JSON input after object field value")
-			}
-			if b[0] != ',' {
-				return b, syntaxError(b, "expected ',' after object field value but found '%c'", b[0])
-			}
-			b = skipSpaces(b[1:])
-		}
-
-		if hasPrefix(b, "null") {
-			return b, syntaxError(b, "cannot decode object key string from 'null' value")
-		}
-
-		b, err = d.decodeString(b, unsafe.Pointer(&key))
+		b, err = d.preprocessInput(i, b, &key)
 		if err != nil {
-			return objectKeyError(b, err)
+			return b, err
 		}
-		b = skipSpaces(b)
-
-		if len(b) == 0 {
-			return b, syntaxError(b, "unexpected end of JSON input after object field key")
-		}
-		if b[0] != ':' {
-			return b, syntaxError(b, "expected ':' after object field key but found '%c'", b[0])
-		}
-		b = skipSpaces(b[1:])
 
 		b, err = d.decodeInterface(b, unsafe.Pointer(&val))
 		if err != nil {
@@ -804,7 +775,6 @@ func (d decoder) decodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 		}
 
 		m[key] = val
-		i++
 	}
 }
 
@@ -818,22 +788,17 @@ func (d decoder) decodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 		return inputError(b, mapStringRawMessageType)
 	}
 
-	i := 0
 	m := *(*map[string]RawMessage)(p)
-
 	if m == nil {
 		m = make(map[string]RawMessage, 64)
 	}
 
-	var err error
-	var key string
-	var val RawMessage
 	input := b
-
 	b = b[1:]
-	for {
-		key = ""
-		val = nil
+	for i := 0; ; i++ {
+		var err error
+		var key string
+		var val RawMessage
 
 		b = skipSpaces(b)
 
@@ -842,33 +807,10 @@ func (d decoder) decodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 			return b[1:], nil
 		}
 
-		if i != 0 {
-			if len(b) == 0 {
-				return b, syntaxError(b, "unexpected end of JSON input after object field value")
-			}
-			if b[0] != ',' {
-				return b, syntaxError(b, "expected ',' after object field value but found '%c'", b[0])
-			}
-			b = skipSpaces(b[1:])
-		}
-
-		if hasPrefix(b, "null") {
-			return b, syntaxError(b, "cannot decode object key string from 'null' value")
-		}
-
-		b, err = d.decodeString(b, unsafe.Pointer(&key))
+		b, err = d.preprocessInput(i, b, &key)
 		if err != nil {
-			return objectKeyError(b, err)
+			return b, err
 		}
-		b = skipSpaces(b)
-
-		if len(b) == 0 {
-			return b, syntaxError(b, "unexpected end of JSON input after object field key")
-		}
-		if b[0] != ':' {
-			return b, syntaxError(b, "expected ':' after object field key but found '%c'", b[0])
-		}
-		b = skipSpaces(b[1:])
 
 		b, err = d.decodeRawMessage(b, unsafe.Pointer(&val))
 		if err != nil {
@@ -887,8 +829,39 @@ func (d decoder) decodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 		}
 
 		m[key] = val
-		i++
 	}
+}
+
+func (d decoder) preprocessInput(idx int, b []byte, key *string) ([]byte, error) {
+	if idx != 0 {
+		if len(b) == 0 {
+			return b, syntaxError(b, "unexpected end of JSON input after object field value")
+		}
+		if b[0] != ',' {
+			return b, syntaxError(b, "expected ',' after object field value but found '%c'", b[0])
+		}
+		b = skipSpaces(b[1:])
+	}
+
+	if hasPrefix(b, "null") {
+		return b, syntaxError(b, "cannot decode object key string from 'null' value")
+	}
+
+	b, err := d.decodeString(b, unsafe.Pointer(key))
+	if err != nil {
+		return objectKeyError(b, err)
+	}
+	b = skipSpaces(b)
+
+	if len(b) == 0 {
+		return b, syntaxError(b, "unexpected end of JSON input after object field key")
+	}
+	if b[0] != ':' {
+		return b, syntaxError(b, "expected ':' after object field key but found '%c'", b[0])
+	}
+	b = skipSpaces(b[1:])
+
+	return b, nil
 }
 
 func (d decoder) decodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byte, error) {
