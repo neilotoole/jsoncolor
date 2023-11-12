@@ -278,7 +278,7 @@ func (d decoder) decodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 		return b[4:], nil
 	}
 
-	s, r, new, err := parseStringUnquote(b, nil)
+	s, r, isNew, err := parseStringUnquote(b, nil)
 	if err != nil {
 		if len(b) == 0 || b[0] != '"' {
 			return inputError(b, stringType)
@@ -286,7 +286,7 @@ func (d decoder) decodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 		return r, err
 	}
 
-	if new || (d.flags&DontCopyString) != 0 {
+	if isNew || (d.flags&DontCopyString) != 0 {
 		*(*string)(p) = *(*string)(unsafe.Pointer(&s))
 	} else {
 		*(*string)(p) = string(s)
