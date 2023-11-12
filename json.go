@@ -161,7 +161,7 @@ func Indent(dst *bytes.Buffer, src []byte, prefix, indent string) error {
 // Marshal is documented at https://golang.org/pkg/encoding/json/#Marshal
 func Marshal(x interface{}) ([]byte, error) {
 	var err error
-	var buf = encoderBufferPool.Get().(*encoderBuffer)
+	var buf = encoderBufferPool.Get().(*encoderBuffer) //nolint:errcheck
 
 	if buf.data, err = Append(buf.data[:0], x, EscapeHTML|SortMapKeys, nil, nil); err != nil {
 		return nil, err
@@ -398,7 +398,7 @@ func (enc *Encoder) Encode(v interface{}) error {
 	}
 
 	var err error
-	var buf = encoderBufferPool.Get().(*encoderBuffer)
+	var buf = encoderBufferPool.Get().(*encoderBuffer) //nolint:errcheck
 
 	// Note: unlike the original segmentio encoder, indentation is
 	// performed via the Append function.

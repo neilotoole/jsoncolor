@@ -527,7 +527,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 		return b, nil
 	}
 
-	s := mapslicePool.Get().(*mapslice)
+	s := mapslicePool.Get().(*mapslice) //nolint:errcheck
 	if cap(s.elements) < len(m) {
 		s.elements = make([]element, 0, align(10, uintptr(len(m))))
 	}
@@ -628,7 +628,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 		return b, nil
 	}
 
-	s := mapslicePool.Get().(*mapslice)
+	s := mapslicePool.Get().(*mapslice) //nolint:errcheck
 	if cap(s.elements) < len(m) {
 		s.elements = make([]element, 0, align(10, uintptr(len(m))))
 	}
