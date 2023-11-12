@@ -430,7 +430,8 @@ func (e encoder) encodeMap(b []byte, p unsafe.Pointer, t reflect.Type, encodeKey
 		b = e.indentr.appendByte(b, '\n')
 
 		e.indentr.push()
-		for i, k := range keys {
+		for i := range keys {
+			k := keys[i]
 			v := m.MapIndex(k)
 
 			if i != 0 {
@@ -544,7 +545,8 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 		b = e.indentr.appendByte(b, '\n')
 
 		e.indentr.push()
-		for i, elem := range s.elements {
+		for i := range s.elements {
+			elem := s.elements[i]
 			if i != 0 {
 				b = e.clrs.appendPunc(b, ',')
 				b = e.indentr.appendByte(b, '\n')
@@ -599,7 +601,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 			var i = 0
 
 			e.indentr.push()
-			for k, v := range m {
+			for k := range m {
 				if i != 0 {
 					b = e.clrs.appendPunc(b, ',')
 					b = e.indentr.appendByte(b, '\n')
@@ -612,6 +614,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 				b = e.clrs.appendPunc(b, ':')
 				b = e.indentr.appendByte(b, ' ')
 
+				v := m[k]
 				b, err = e.encodeRawMessage(b, unsafe.Pointer(&v))
 				if err != nil {
 					break
@@ -646,7 +649,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 
 		e.indentr.push()
 
-		for i, elem := range s.elements {
+		for i := range s.elements {
 			if i != 0 {
 				b = e.clrs.appendPunc(b, ',')
 				b = e.indentr.appendByte(b, '\n')
@@ -654,6 +657,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 
 			b = e.indentr.appendIndent(b)
 
+			elem := s.elements[i]
 			b, _ = e.encodeKey(b, unsafe.Pointer(&elem.key))
 			b = e.clrs.appendPunc(b, ':')
 			b = e.indentr.appendByte(b, ' ')
