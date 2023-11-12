@@ -633,11 +633,12 @@ func (d decoder) decodeSlice(b []byte, p unsafe.Pointer, size uintptr, t reflect
 
 		b, err = decode(d, b, unsafe.Pointer(uintptr(s.data)+(uintptr(s.len)*size)))
 		if err != nil {
-			if _, r, err0 := parseValue(input); err0 != nil {
+			_, r, err0 := parseValue(input)
+			if err0 != nil {
 				return r, err0
-			} else {
-				b = r
 			}
+			b = r
+
 			var e *UnmarshalTypeError
 			if errors.As(err, &e) {
 				e.Struct = t.String() + e.Struct
@@ -713,11 +714,11 @@ func (d decoder) decodeMap(b []byte, p unsafe.Pointer, t, kt, vt reflect.Type, k
 		b = skipSpaces(b[1:])
 
 		if b, err = decodeValue(d, b, vptr); err != nil {
-			if _, r, err0 := parseValue(input); err0 != nil {
+			_, r, err0 := parseValue(input)
+			if err0 != nil {
 				return r, err0
-			} else {
-				b = r
 			}
+			b = r
 			var e *UnmarshalTypeError
 			if errors.As(err, &e) {
 				e.Struct = "map[" + kt.String() + "]" + vt.String() + "{" + e.Struct + "}"
@@ -795,11 +796,11 @@ func (d decoder) decodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 
 		b, err = d.decodeInterface(b, unsafe.Pointer(&val))
 		if err != nil {
-			if _, r, err0 := parseValue(input); err0 != nil {
+			_, r, err0 := parseValue(input)
+			if err0 != nil {
 				return r, err0
-			} else {
-				b = r
 			}
+			b = r
 			var e *UnmarshalTypeError
 			if errors.As(err, &e) {
 				e.Struct = mapStringInterfaceType.String() + e.Struct
@@ -877,11 +878,12 @@ func (d decoder) decodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 
 		b, err = d.decodeRawMessage(b, unsafe.Pointer(&val))
 		if err != nil {
-			if _, r, err2 := parseValue(input); err2 != nil {
+			_, r, err2 := parseValue(input)
+			if err2 != nil {
 				return r, err2
-			} else {
-				b = r
 			}
+			b = r
+
 			var e *UnmarshalTypeError
 			if errors.As(err, &e) {
 				e.Struct = mapStringRawMessageType.String() + e.Struct
@@ -968,11 +970,12 @@ func (d decoder) decodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 		}
 
 		if b, err = f.codec.decode(d, b, unsafe.Pointer(uintptr(p)+f.offset)); err != nil {
-			if _, r, err2 := parseValue(input); err2 != nil {
+			_, r, err2 := parseValue(input)
+			if err2 != nil {
 				return r, err2
-			} else {
-				b = r
 			}
+			b = r
+
 			var e *UnmarshalTypeError
 			if errors.As(err, &e) {
 				e.Struct = st.typ.String() + e.Struct
