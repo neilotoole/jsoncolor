@@ -115,7 +115,7 @@ func (e encoder) encodeFloat(b []byte, f float64, bits int) ([]byte, error) {
 		}
 	}
 
-	b = strconv.AppendFloat(b, f, fmt, -1, int(bits))
+	b = strconv.AppendFloat(b, f, fmt, -1, bits)
 
 	if fmt == 'e' {
 		// clean up e-09 to e-9
