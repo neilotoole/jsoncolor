@@ -5,6 +5,7 @@ import (
 	"encoding"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
@@ -534,7 +535,8 @@ func (d decoder) decodeArray(b []byte, p unsafe.Pointer, n int, size uintptr, t 
 
 		b, err = decode(d, b, unsafe.Pointer(uintptr(p)+(uintptr(i)*size)))
 		if err != nil {
-			if e, ok := err.(*UnmarshalTypeError); ok {
+			var e *UnmarshalTypeError
+			if errors.As(err, &e) {
 				e.Struct = t.String() + e.Struct
 				e.Field = strconv.Itoa(i) + "." + e.Field
 			}
@@ -636,7 +638,8 @@ func (d decoder) decodeSlice(b []byte, p unsafe.Pointer, size uintptr, t reflect
 			} else {
 				b = r
 			}
-			if e, ok := err.(*UnmarshalTypeError); ok {
+			var e *UnmarshalTypeError
+			if errors.As(err, &e) {
 				e.Struct = t.String() + e.Struct
 				e.Field = strconv.Itoa(s.len) + "." + e.Field
 			}
@@ -715,7 +718,8 @@ func (d decoder) decodeMap(b []byte, p unsafe.Pointer, t, kt, vt reflect.Type, k
 			} else {
 				b = r
 			}
-			if e, ok := err.(*UnmarshalTypeError); ok {
+			var e *UnmarshalTypeError
+			if errors.As(err, &e) {
 				e.Struct = "map[" + kt.String() + "]" + vt.String() + "{" + e.Struct + "}"
 				e.Field = fmt.Sprint(k.Interface()) + "." + e.Field
 			}
@@ -796,7 +800,8 @@ func (d decoder) decodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 			} else {
 				b = r
 			}
-			if e, ok := err.(*UnmarshalTypeError); ok {
+			var e *UnmarshalTypeError
+			if errors.As(err, &e) {
 				e.Struct = mapStringInterfaceType.String() + e.Struct
 				e.Field = key + "." + e.Field
 			}
@@ -877,7 +882,8 @@ func (d decoder) decodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 			} else {
 				b = r
 			}
-			if e, ok := err.(*UnmarshalTypeError); ok {
+			var e *UnmarshalTypeError
+			if errors.As(err, &e) {
 				e.Struct = mapStringRawMessageType.String() + e.Struct
 				e.Field = key + "." + e.Field
 			}
@@ -967,7 +973,8 @@ func (d decoder) decodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 			} else {
 				b = r
 			}
-			if e, ok := err.(*UnmarshalTypeError); ok {
+			var e *UnmarshalTypeError
+			if errors.As(err, &e) {
 				e.Struct = st.typ.String() + e.Struct
 				e.Field = string(k) + "." + e.Field
 			}
