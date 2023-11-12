@@ -731,7 +731,7 @@ func TestDecodeLines(t *testing.T) {
 					}
 
 					switch err.(type) {
-					case *SyntaxError, *UnmarshalTypeError, *UnmarshalFieldError:
+					case *SyntaxError, *UnmarshalTypeError:
 						t.Log("unmarshal error", err)
 						continue
 					}
