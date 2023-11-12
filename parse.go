@@ -276,7 +276,7 @@ func parseFalse(b []byte) ([]byte, []byte, error) {
 func parseNumber(b []byte) (v, r []byte, err error) {
 	if len(b) == 0 {
 		r, err = b, unexpectedEOF(b)
-		return
+		return v, r, err
 	}
 
 	i := 0
@@ -287,12 +287,12 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 
 	if i == len(b) {
 		r, err = b[i:], syntaxError(b, "missing number value after sign")
-		return
+		return v, r, err
 	}
 
 	if b[i] < '0' || b[i] > '9' {
 		r, err = b[i:], syntaxError(b, "expected digit but got '%c'", b[i])
-		return
+		return v, r, err
 	}
 
 	// integer part
@@ -300,11 +300,11 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 		i++
 		if i == len(b) || (b[i] != '.' && b[i] != 'e' && b[i] != 'E') {
 			v, r = b[:i], b[i:]
-			return
+			return v, r, err
 		}
 		if '0' <= b[i] && b[i] <= '9' {
 			r, err = b[i:], syntaxError(b, "cannot decode number with leading '0' character")
-			return
+			return v, r, err
 		}
 	}
 
@@ -321,7 +321,7 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 			if c := b[i]; !('0' <= c && c <= '9') {
 				if i == decimalStart {
 					r, err = b[i:], syntaxError(b, "expected digit but found '%c'", c)
-					return
+					return v, r, err
 				}
 				break
 			}
@@ -330,7 +330,7 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 
 		if i == decimalStart {
 			r, err = b[i:], syntaxError(b, "expected decimal part after '.'")
-			return
+			return v, r, err
 		}
 	}
 
@@ -346,7 +346,7 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 
 		if i == len(b) {
 			r, err = b[i:], syntaxError(b, "missing exponent in number")
-			return
+			return v, r, err
 		}
 
 		exponentStart := i
@@ -355,7 +355,7 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 			if c := b[i]; !('0' <= c && c <= '9') {
 				if i == exponentStart {
 					err = syntaxError(b, "expected digit but found '%c'", c)
-					return
+					return v, r, err
 				}
 				break
 			}
@@ -364,7 +364,7 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 	}
 
 	v, r = b[:i], b[i:]
-	return
+	return v, r, err
 }
 
 func parseUnicode(b []byte) (rune, int, error) {
