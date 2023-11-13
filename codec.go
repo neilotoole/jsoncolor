@@ -607,7 +607,7 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 	}
 
 	// Only unambiguous embedded fields must be serialized.
-	ambiguousNames, ambiguousTags := ambiguousNamesAndTags(names, embedded)
+	ambiguousNames, ambiguousTags := ambiguousNameTagCount(names, embedded)
 
 	for _, embfield := range embedded {
 		subfield := *embfield.subfield
@@ -642,7 +642,7 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 	return fields
 }
 
-func ambiguousNamesAndTags(names map[string]struct{}, embedded []embeddedField) (map[string]int, map[string]int) {
+func ambiguousNameTagCount(names map[string]struct{}, embedded []embeddedField) (map[string]int, map[string]int) {
 	ambiguousNames := make(map[string]int)
 	ambiguousTags := make(map[string]int)
 
