@@ -44,9 +44,8 @@ Example Usage:
   $ jc -c -p=false -i ./testdata/sakila_actor.json 
 
   # Pipe a JSON input file to jc, outputting to a specified file; and DO NOT prettify
-  $ cat ./testdata/sakila_actor.json | jc -p=false -o /tmp/out.json
-`
-	fmt.Fprint(os.Stderr, msg)
+  $ cat ./testdata/sakila_actor.json | jc -p=false -o /tmp/out.json`
+	fmt.Fprintln(os.Stderr, msg)
 }
 
 func main() {

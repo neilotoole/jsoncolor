@@ -453,8 +453,7 @@ func TestEncode_BigStruct(t *testing.T) {
 // has a fast path).
 //
 // NOTE: Currently the encoder is broken wrt colors enabled
-//
-//	for non-string map keys, though that is kinda JSON-illegal anyway.
+// for non-string map keys, though that is kinda JSON-illegal anyway.
 func TestEncode_Map_Not_StringInterface(t *testing.T) {
 	buf := &bytes.Buffer{}
 	enc := jsoncolor.NewEncoder(buf)

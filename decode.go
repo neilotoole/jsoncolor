@@ -374,9 +374,10 @@ func (d decoder) decodeFromStringToInt(b []byte, p unsafe.Pointer, t reflect.Typ
 		v = append(u, v[i:]...)
 	}
 
-	if r, err0 := decode(d, v, p); err0 != nil {
+	var r []byte
+	if r, err = decode(d, v, p); err != nil {
 		var e *SyntaxError
-		if errors.As(err0, &e) {
+		if errors.As(err, &e) {
 			if hasPrefix(v, "-") {
 				// The standard library interprets sequences of '-' characters
 				// as numbers but still returns type errors in this case...
@@ -386,14 +387,14 @@ func (d decoder) decodeFromStringToInt(b []byte, p unsafe.Pointer, t reflect.Typ
 		}
 		// When the input value was a valid number representation we retain the
 		// error returned by the decoder.
-		if _, _, err1 := parseNumber(v); err1 != nil {
+		if _, _, err2 := parseNumber(v); err2 != nil {
 			// When the input value valid JSON we mirror the behavior of the
 			// encoding/json package and return a generic error.
-			if _, _, err2 := parseValue(v); err2 == nil {
+			if _, _, err2 = parseValue(v); err2 == nil {
 				return b, fmt.Errorf("json: invalid use of ,string struct tag, trying to unmarshal %q into int", prefix(v))
 			}
 		}
-		return b, err0
+		return b, err
 	} else if len(r) != 0 {
 		return r, unmarshalTypeError(v, t)
 	}
@@ -442,7 +443,7 @@ func (d decoder) decodeDuration(b []byte, p unsafe.Pointer) ([]byte, error) {
 		return b[4:], nil
 	}
 
-	// in order to inter-operate with the stdlib, we must be able to interpret
+	// In order to interoperate with the stdlib, we must be able to interpret
 	// durations passed as integer values.  there's some discussion about being
 	// flexible on how durations are formatted, but for the time being, it's
 	// been punted to go2 at the earliest: https://github.com/golang/go/issues/4712
@@ -563,7 +564,7 @@ func (d decoder) decodeArray(b []byte, p unsafe.Pointer, n int, size uintptr, t 
 	}
 }
 
-// This is a placeholder used to consturct non-nil empty slices.
+// This is a placeholder used to construct non-nil empty slices.
 var empty struct{}
 
 func (d decoder) decodeSlice(b []byte, p unsafe.Pointer, size uintptr, t reflect.Type, decode decodeFunc) ([]byte, error) {
@@ -627,9 +628,9 @@ func (d decoder) decodeSlice(b []byte, p unsafe.Pointer, size uintptr, t reflect
 
 		b, err = decode(d, b, unsafe.Pointer(uintptr(s.data)+(uintptr(s.len)*size)))
 		if err != nil {
-			_, r, err0 := parseValue(input)
-			if err0 != nil {
-				return r, err0
+			_, r, err2 := parseValue(input)
+			if err2 != nil {
+				return r, err2
 			}
 			b = r
 
@@ -708,9 +709,9 @@ func (d decoder) decodeMap(b []byte, p unsafe.Pointer, t, kt, vt reflect.Type, k
 		b = skipSpaces(b[1:])
 
 		if b, err = decodeValue(d, b, vptr); err != nil {
-			_, r, err0 := parseValue(input)
-			if err0 != nil {
-				return r, err0
+			_, r, err2 := parseValue(input)
+			if err2 != nil {
+				return r, err2
 			}
 			b = r
 			var e *UnmarshalTypeError
@@ -761,9 +762,9 @@ func (d decoder) decodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 
 		b, err = d.decodeInterface(b, unsafe.Pointer(&val))
 		if err != nil {
-			_, r, err0 := parseValue(input)
-			if err0 != nil {
-				return r, err0
+			_, r, err2 := parseValue(input)
+			if err2 != nil {
+				return r, err2
 			}
 			b = r
 			var e *UnmarshalTypeError
