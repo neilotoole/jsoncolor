@@ -17,11 +17,6 @@ const (
 	cr = '\r'
 )
 
-const (
-	escape = '\\' //nolint:unused
-	quote  = '"'  //nolint:varcheck,unused // from original code
-)
-
 func skipSpaces(b []byte) []byte {
 	b, _ = skipSpacesN(b)
 	return b
