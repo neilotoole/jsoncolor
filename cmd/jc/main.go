@@ -6,9 +6,8 @@
 //
 // Examples:
 //
-//  $ cat example.json | jc
-//  $ cat example.json | jc -c false
-
+//	$ cat example.json | jc
+//	$ cat example.json | jc -c false
 package main
 
 import (
@@ -45,9 +44,8 @@ Example Usage:
   $ jc -c -p=false -i ./testdata/sakila_actor.json 
 
   # Pipe a JSON input file to jc, outputting to a specified file; and DO NOT prettify
-  $ cat ./testdata/sakila_actor.json | jc -p=false -o /tmp/out.json
-`
-	fmt.Fprintf(os.Stderr, msg)
+  $ cat ./testdata/sakila_actor.json | jc -p=false -o /tmp/out.json`
+	fmt.Fprintln(os.Stderr, msg)
 }
 
 func main() {
@@ -124,7 +122,7 @@ func doMain() error {
 
 	var enc *json.Encoder
 
-	if flagColorize != nil && *flagColorize == true && json.IsColorTerminal(out) {
+	if flagColorize != nil && *flagColorize && json.IsColorTerminal(out) {
 		out = colorable.NewColorable(out.(*os.File)) // colorable is needed for Windows
 		enc = json.NewEncoder(out)
 		clrs := json.DefaultColors()
@@ -136,14 +134,10 @@ func doMain() error {
 		enc = json.NewEncoder(out)
 	}
 
-	if flagPretty != nil && *flagPretty == true {
+	if flagPretty != nil && *flagPretty {
 		// Pretty-print, i.e. set indent
 		enc.SetIndent("", "  ")
 	}
 
-	if err = enc.Encode(jsn); err != nil {
-		return err
-	}
-
-	return nil
+	return enc.Encode(jsn)
 }

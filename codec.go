@@ -3,6 +3,7 @@ package jsoncolor
 import (
 	"encoding"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -26,21 +27,23 @@ type encoder struct {
 }
 type decoder struct{ flags ParseFlags }
 
-type encodeFunc func(encoder, []byte, unsafe.Pointer) ([]byte, error)
-type decodeFunc func(decoder, []byte, unsafe.Pointer) ([]byte, error)
-
-type emptyFunc func(unsafe.Pointer) bool
-type sortFunc func([]reflect.Value)
-
-var (
-	// Eventually consistent cache mapping go types to dynamically generated
-	// codecs.
-	//
-	// Note: using a uintptr as key instead of reflect.Type shaved ~15ns off of
-	// the ~30ns Marhsal/Unmarshal functions which were dominated by the map
-	// lookup time for simple types like bool, int, etc..
-	cache unsafe.Pointer // map[unsafe.Pointer]codec
+type (
+	encodeFunc func(encoder, []byte, unsafe.Pointer) ([]byte, error)
+	decodeFunc func(decoder, []byte, unsafe.Pointer) ([]byte, error)
 )
+
+type (
+	emptyFunc func(unsafe.Pointer) bool
+	sortFunc  func([]reflect.Value)
+)
+
+// Eventually consistent cache mapping go types to dynamically generated
+// codecs.
+//
+// Note: using a uintptr as key instead of reflect.Type shaved ~15ns off of
+// the ~30ns Marshal/Unmarshal functions which were dominated by the map
+// lookup time for simple types like bool, int, etc..
+var cache unsafe.Pointer // map[unsafe.Pointer]codec
 
 func cacheLoad() map[unsafe.Pointer]codec {
 	p := atomic.LoadPointer(&cache)
@@ -110,7 +113,7 @@ func constructCodec(t reflect.Type, seen map[reflect.Type]*structType, canAddr b
 	}
 
 	if c.encode != nil {
-		return
+		return c
 	}
 
 	switch t.Kind() {
@@ -206,7 +209,7 @@ func constructCodec(t reflect.Type, seen map[reflect.Type]*structType, canAddr b
 		c.decode = constructTextUnmarshalerDecodeFunc(t, true)
 	}
 
-	return
+	return c
 }
 
 func constructStringCodec(t reflect.Type, seen map[reflect.Type]*structType, canAddr bool) codec {
@@ -496,16 +499,16 @@ func constructEmbeddedStructPointerDecodeFunc(t reflect.Type, unexported bool, o
 	}
 }
 
-func appendStructFields(fields []structField, t reflect.Type, offset uintptr, seen map[reflect.Type]*structType, canAddr bool) []structField {
-	type embeddedField struct {
-		index      int
-		offset     uintptr
-		pointer    bool
-		unexported bool
-		subtype    *structType
-		subfield   *structField
-	}
+type embeddedField struct {
+	index      int
+	offset     uintptr
+	pointer    bool
+	unexported bool
+	subtype    *structType
+	subfield   *structField
+}
 
+func appendStructFields(fields []structField, t reflect.Type, offset uintptr, seen map[reflect.Type]*structType, canAddr bool) []structField {
 	names := make(map[string]struct{})
 	embedded := make([]embeddedField, 0, 10)
 
@@ -513,12 +516,12 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 		f := t.Field(i)
 
 		var (
-			name       = f.Name
-			anonymous  = f.Anonymous
-			tag        = false
-			omitempty  = false
-			stringify  = false
-			unexported = len(f.PkgPath) != 0
+			name             = f.Name
+			anonymous        = f.Anonymous
+			isTag            = false
+			omitempty        = false
+			stringifyEnabled = false
+			unexported       = len(f.PkgPath) != 0
 		)
 
 		if unexported && !anonymous { // unexported
@@ -527,7 +530,7 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 
 		if parts := strings.Split(f.Tag.Get("json"), ","); len(parts) != 0 {
 			if len(parts[0]) != 0 {
-				name, tag = parts[0], true
+				name, isTag = parts[0], true
 			}
 
 			if name == "-" && len(parts) == 1 { // ignored
@@ -543,12 +546,12 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 				case "omitempty":
 					omitempty = true
 				case "string":
-					stringify = true
+					stringifyEnabled = true
 				}
 			}
 		}
 
-		if anonymous && !tag { // embedded
+		if anonymous && !isTag { // embedded
 			typ := f.Type
 			ptr := f.Type.Kind() == reflect.Ptr
 
@@ -582,50 +585,17 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 			}
 		}
 
-		codec := constructCodec(f.Type, seen, canAddr)
+		c := constructCodec(f.Type, seen, canAddr)
 
-		if stringify {
-			// https://golang.org/pkg/encoding/json/#Marshal
-			//
-			// The "string" option signals that a field is stored as JSON inside
-			// a JSON-encoded string. It applies only to fields of string,
-			// floating point, integer, or boolean types. This extra level of
-			// encoding is sometimes used when communicating with JavaScript
-			// programs:
-			typ := f.Type
-
-			if typ.Kind() == reflect.Ptr {
-				typ = typ.Elem()
-			}
-
-			switch typ.Kind() {
-			case reflect.Int,
-				reflect.Int8,
-				reflect.Int16,
-				reflect.Int32,
-				reflect.Int64,
-				reflect.Uint,
-				reflect.Uintptr,
-				reflect.Uint8,
-				reflect.Uint16,
-				reflect.Uint32,
-				reflect.Uint64:
-				codec.encode = constructStringEncodeFunc(codec.encode)
-				codec.decode = constructStringToIntDecodeFunc(typ, codec.decode)
-			case reflect.Bool,
-				reflect.Float32,
-				reflect.Float64,
-				reflect.String:
-				codec.encode = constructStringEncodeFunc(codec.encode)
-				codec.decode = constructStringDecodeFunc(codec.decode)
-			}
+		if stringifyEnabled {
+			c = stringify(&f, c)
 		}
 
 		fields = append(fields, structField{
-			codec:     codec,
+			codec:     c,
 			offset:    offset + f.Offset,
 			empty:     emptyFuncOf(f.Type),
-			tag:       tag,
+			tag:       isTag,
 			omitempty: omitempty,
 			name:      name,
 			index:     i << 32,
@@ -637,22 +607,7 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 	}
 
 	// Only unambiguous embedded fields must be serialized.
-	ambiguousNames := make(map[string]int)
-	ambiguousTags := make(map[string]int)
-
-	// Embedded types can never override a field that was already present at
-	// the top-level.
-	for name := range names {
-		ambiguousNames[name]++
-		ambiguousTags[name]++
-	}
-
-	for _, embfield := range embedded {
-		ambiguousNames[embfield.subfield.name]++
-		if embfield.subfield.tag {
-			ambiguousTags[embfield.subfield.name]++
-		}
-	}
+	ambiguousNames, ambiguousTags := ambiguousNameTagCount(names, embedded)
 
 	for _, embfield := range embedded {
 		subfield := *embfield.subfield
@@ -685,6 +640,66 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 
 	sort.Slice(fields, func(i, j int) bool { return fields[i].index < fields[j].index })
 	return fields
+}
+
+func ambiguousNameTagCount(names map[string]struct{}, embedded []embeddedField) (map[string]int, map[string]int) {
+	ambiguousNames := make(map[string]int)
+	ambiguousTags := make(map[string]int)
+
+	// Embedded types can never override a field that was already present at
+	// the top-level.
+	for name := range names {
+		ambiguousNames[name]++
+		ambiguousTags[name]++
+	}
+
+	for _, embfield := range embedded {
+		ambiguousNames[embfield.subfield.name]++
+		if embfield.subfield.tag {
+			ambiguousTags[embfield.subfield.name]++
+		}
+	}
+
+	return ambiguousNames, ambiguousTags
+}
+
+func stringify(f *reflect.StructField, c codec) codec {
+	// https://golang.org/pkg/encoding/json/#Marshal
+	//
+	// The "string" option signals that a field is stored as JSON inside
+	// a JSON-encoded string. It applies only to fields of string,
+	// floating point, integer, or boolean types. This extra level of
+	// encoding is sometimes used when communicating with JavaScript
+	// programs:
+	typ := f.Type
+
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+
+	switch typ.Kind() {
+	case reflect.Int,
+		reflect.Int8,
+		reflect.Int16,
+		reflect.Int32,
+		reflect.Int64,
+		reflect.Uint,
+		reflect.Uintptr,
+		reflect.Uint8,
+		reflect.Uint16,
+		reflect.Uint32,
+		reflect.Uint64:
+		c.encode = constructStringEncodeFunc(c.encode)
+		c.decode = constructStringToIntDecodeFunc(typ, c.decode)
+	case reflect.Bool,
+		reflect.Float32,
+		reflect.Float64,
+		reflect.String:
+		c.encode = constructStringEncodeFunc(c.encode)
+		c.decode = constructStringDecodeFunc(c.decode)
+	}
+
+	return c
 }
 
 func encodeString(s string, flags AppendFlags) string {
@@ -789,16 +804,17 @@ func constructInlineValueEncodeFunc(encode encodeFunc) encodeFunc {
 // compiles down to zero instructions.
 // USE CAREFULLY!
 // This was copied from the runtime; see issues 23382 and 7921.
+//
 //go:nosplit
 func noescape(p unsafe.Pointer) unsafe.Pointer {
 	x := uintptr(p)
-	return unsafe.Pointer(x ^ 0)
+	return unsafe.Pointer(x)
 }
 
 func alignedSize(t reflect.Type) uintptr {
 	a := t.Align()
 	s := t.Size()
-	return align(uintptr(a), uintptr(s))
+	return align(uintptr(a), s)
 }
 
 func align(align, size uintptr) uintptr {
@@ -914,7 +930,6 @@ type structType struct {
 	fieldsIndex map[string]*structField
 	ficaseIndex map[string]*structField
 	typ         reflect.Type
-	inlined     bool
 }
 
 type structField struct {
@@ -943,26 +958,12 @@ func unexpectedEOF(b []byte) error {
 	return syntaxError(b, "unexpected end of JSON input")
 }
 
-var syntaxErrorMsgOffset = ^uintptr(0)
-
-func init() {
-	t := reflect.TypeOf(SyntaxError{})
-	for i, n := 0, t.NumField(); i < n; i++ {
-		if f := t.Field(i); f.Type.Kind() == reflect.String {
-			syntaxErrorMsgOffset = f.Offset
-		}
-	}
-}
-
 func syntaxError(b []byte, msg string, args ...interface{}) error {
 	e := new(SyntaxError)
-	i := syntaxErrorMsgOffset
-	if i != ^uintptr(0) {
-		s := "json: " + fmt.Sprintf(msg, args...) + ": " + prefix(b)
-		p := unsafe.Pointer(e)
-		// Hack to set the unexported `msg` field.
-		*(*string)(unsafe.Pointer(uintptr(p) + i)) = s
-	}
+	s := "json: " + fmt.Sprintf(msg, args...) + ": " + prefix(b)
+	p := unsafe.Pointer(e)
+	// Hack to set the unexported `msg` field.
+	*(*string)(p) = s
 	return e
 }
 
@@ -981,8 +982,8 @@ func objectKeyError(b []byte, err error) ([]byte, error) {
 	if len(b) == 0 {
 		return nil, unexpectedEOF(b)
 	}
-	switch err.(type) {
-	case *UnmarshalTypeError:
+	var e *UnmarshalTypeError
+	if errors.As(err, &e) {
 		err = syntaxError(b, "invalid character '%c' looking for beginning of object key", b[0])
 	}
 	return b, err
@@ -1007,7 +1008,7 @@ func uintStringsAreSorted(u0, u1 uint64) bool {
 
 //go:nosplit
 func stringToBytes(s string) []byte {
-	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{ // nolint:govet // from segment's code
+	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{ //nolint:govet // from segment's code
 		Data: ((*reflect.StringHeader)(unsafe.Pointer(&s))).Data,
 		Len:  len(s),
 		Cap:  len(s),
@@ -1056,128 +1057,3 @@ var (
 	textMarshalerType   = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
 	textUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 )
-
-// =============================================================================
-// Copyright 2009 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
-// appendDuration appends a human-readable representation of d to b.
-//
-// The function copies the implementation of time.Duration.String but prevents
-// Go from making a dynamic memory allocation on the returned value.
-func appendDuration(b []byte, d time.Duration) []byte {
-	// Largest time is 2540400h10m10.000000000s
-	var buf [32]byte
-	w := len(buf)
-
-	u := uint64(d)
-	neg := d < 0
-	if neg {
-		u = -u
-	}
-
-	if u < uint64(time.Second) {
-		// Special case: if duration is smaller than a second,
-		// use smaller units, like 1.2ms
-		var prec int
-		w--
-		buf[w] = 's'
-		w--
-		switch {
-		case u == 0:
-			return append(b, '0', 's')
-		case u < uint64(time.Microsecond):
-			// print nanoseconds
-			prec = 0
-			buf[w] = 'n'
-		case u < uint64(time.Millisecond):
-			// print microseconds
-			prec = 3
-			// U+00B5 'µ' micro sign == 0xC2 0xB5
-			w-- // Need room for two bytes.
-			copy(buf[w:], "µ")
-		default:
-			// print milliseconds
-			prec = 6
-			buf[w] = 'm'
-		}
-		w, u = fmtFrac(buf[:w], u, prec)
-		w = fmtInt(buf[:w], u)
-	} else {
-		w--
-		buf[w] = 's'
-
-		w, u = fmtFrac(buf[:w], u, 9)
-
-		// u is now integer seconds
-		w = fmtInt(buf[:w], u%60)
-		u /= 60
-
-		// u is now integer minutes
-		if u > 0 {
-			w--
-			buf[w] = 'm'
-			w = fmtInt(buf[:w], u%60)
-			u /= 60
-
-			// u is now integer hours
-			// Stop at hours because days can be different lengths.
-			if u > 0 {
-				w--
-				buf[w] = 'h'
-				w = fmtInt(buf[:w], u)
-			}
-		}
-	}
-
-	if neg {
-		w--
-		buf[w] = '-'
-	}
-
-	return append(b, buf[w:]...)
-}
-
-// fmtFrac formats the fraction of v/10**prec (e.g., ".12345") into the
-// tail of buf, omitting trailing zeros.  it omits the decimal
-// point too when the fraction is 0.  It returns the index where the
-// output bytes begin and the value v/10**prec.
-func fmtFrac(buf []byte, v uint64, prec int) (nw int, nv uint64) {
-	// Omit trailing zeros up to and including decimal point.
-	w := len(buf)
-	print := false
-	for i := 0; i < prec; i++ {
-		digit := v % 10
-		print = print || digit != 0
-		if print {
-			w--
-			buf[w] = byte(digit) + '0'
-		}
-		v /= 10
-	}
-	if print {
-		w--
-		buf[w] = '.'
-	}
-	return w, v
-}
-
-// fmtInt formats v into the tail of buf.
-// It returns the index where the output begins.
-func fmtInt(buf []byte, v uint64) int {
-	w := len(buf)
-	if v == 0 {
-		w--
-		buf[w] = '0'
-	} else {
-		for v > 0 {
-			w--
-			buf[w] = byte(v%10) + '0'
-			v /= 10
-		}
-	}
-	return w
-}
-
-// =============================================================================

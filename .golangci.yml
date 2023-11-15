@@ -215,7 +215,7 @@ linters:
     - errname # checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error
     - errorlint # finds code that will cause problems with the error wrapping scheme introduced in Go 1.13
     - execinquery # checks query string in Query function which reads your Go src files and warning it finds
-    - exhaustive # checks exhaustiveness of enum switch statements
+   #- exhaustive # checks exhaustiveness of enum switch statements
     - exportloopref # checks for pointers to enclosing loop variables
     - forbidigo # forbids identifiers
     - funlen # tool for detection of long functions
@@ -231,7 +231,7 @@ linters:
     - gomodguard # allow and block lists linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations
     - goprintffuncname # checks that printf-like functions are named with f at the end
     - gosec # inspects source code for security problems
-    - lll # reports long lines
+   #- lll # reports long lines
     - loggercheck # checks key value pairs for common logger libraries (kitlog,klog,logr,zap)
     - makezero # finds slice declarations with non-zero initial length
     - nakedret # finds naked returns in functions greater than a specified function length

@@ -66,17 +66,6 @@ func (c *Colors) appendBool(b []byte, v bool) []byte {
 	return append(b, ansiReset...)
 }
 
-// appendKey appends the colorized key v to b.
-func (c *Colors) appendKey(b []byte, v []byte) []byte {
-	if c == nil {
-		return append(b, v...)
-	}
-
-	b = append(b, c.Key...)
-	b = append(b, v...)
-	return append(b, ansiReset...)
-}
-
 // appendInt64 appends the colorized int64 v to b.
 func (c *Colors) appendInt64(b []byte, v int64) []byte {
 	if c == nil {

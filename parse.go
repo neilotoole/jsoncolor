@@ -17,11 +17,6 @@ const (
 	cr = '\r'
 )
 
-const (
-	escape = '\\'
-	quote  = '"' //nolint:varcheck // from original code
-)
-
 func skipSpaces(b []byte) []byte {
 	b, _ = skipSpacesN(b)
 	return b
@@ -69,8 +64,8 @@ func parseInt(b []byte, t reflect.Type) (int64, []byte, error) {
 		for _, d := range b[1:] {
 			if !(d >= '0' && d <= '9') {
 				if count == 0 {
-					b, err := inputError(b, t)
-					return 0, b, err
+					bs, err := inputError(b, t)
+					return 0, bs, err
 				}
 				break
 			}
@@ -102,8 +97,8 @@ func parseInt(b []byte, t reflect.Type) (int64, []byte, error) {
 		for _, d := range b {
 			if !(d >= '0' && d <= '9') {
 				if count == 0 {
-					b, err := inputError(b, t)
-					return 0, b, err
+					bs, err := inputError(b, t)
+					return 0, bs, err
 				}
 				break
 			}
@@ -155,8 +150,8 @@ func parseUint(b []byte, t reflect.Type) (uint64, []byte, error) {
 	for _, d := range b {
 		if !(d >= '0' && d <= '9') {
 			if count == 0 {
-				b, err := inputError(b, t)
-				return 0, b, err
+				bs, err := inputError(b, t)
+				return 0, bs, err
 			}
 			break
 		}
@@ -276,7 +271,7 @@ func parseFalse(b []byte) ([]byte, []byte, error) {
 func parseNumber(b []byte) (v, r []byte, err error) {
 	if len(b) == 0 {
 		r, err = b, unexpectedEOF(b)
-		return
+		return v, r, err
 	}
 
 	i := 0
@@ -287,12 +282,12 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 
 	if i == len(b) {
 		r, err = b[i:], syntaxError(b, "missing number value after sign")
-		return
+		return v, r, err
 	}
 
 	if b[i] < '0' || b[i] > '9' {
 		r, err = b[i:], syntaxError(b, "expected digit but got '%c'", b[i])
-		return
+		return v, r, err
 	}
 
 	// integer part
@@ -300,11 +295,11 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 		i++
 		if i == len(b) || (b[i] != '.' && b[i] != 'e' && b[i] != 'E') {
 			v, r = b[:i], b[i:]
-			return
+			return v, r, err
 		}
 		if '0' <= b[i] && b[i] <= '9' {
 			r, err = b[i:], syntaxError(b, "cannot decode number with leading '0' character")
-			return
+			return v, r, err
 		}
 	}
 
@@ -321,7 +316,7 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 			if c := b[i]; !('0' <= c && c <= '9') {
 				if i == decimalStart {
 					r, err = b[i:], syntaxError(b, "expected digit but found '%c'", c)
-					return
+					return v, r, err
 				}
 				break
 			}
@@ -330,7 +325,7 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 
 		if i == decimalStart {
 			r, err = b[i:], syntaxError(b, "expected decimal part after '.'")
-			return
+			return v, r, err
 		}
 	}
 
@@ -346,7 +341,7 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 
 		if i == len(b) {
 			r, err = b[i:], syntaxError(b, "missing exponent in number")
-			return
+			return v, r, err
 		}
 
 		exponentStart := i
@@ -355,7 +350,7 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 			if c := b[i]; !('0' <= c && c <= '9') {
 				if i == exponentStart {
 					err = syntaxError(b, "expected digit but found '%c'", c)
-					return
+					return v, r, err
 				}
 				break
 			}
@@ -364,7 +359,7 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 	}
 
 	v, r = b[:i], b[i:]
-	return
+	return v, r, err
 }
 
 func parseUnicode(b []byte) (rune, int, error) {
@@ -435,7 +430,7 @@ func parseString(b []byte) ([]byte, []byte, error) {
 	return s, b, err
 }
 
-func parseStringUnquote(b []byte, r []byte) ([]byte, []byte, bool, error) {
+func parseStringUnquote(b, r []byte) ([]byte, []byte, bool, error) {
 	s, b, escaped, err := parseStringFast(b)
 	if err != nil {
 		return s, b, false, err
@@ -524,7 +519,7 @@ func appendRune(b []byte, r rune) []byte {
 	return b[:n+utf8.EncodeRune(b[n:], r)]
 }
 
-func appendCoerceInvalidUTF8(b []byte, s []byte) []byte {
+func appendCoerceInvalidUTF8(b, s []byte) []byte {
 	c := [4]byte{}
 
 	for _, r := range string(s) {
@@ -544,9 +539,9 @@ func parseObject(b []byte) ([]byte, []byte, error) {
 	}
 
 	var err error
-	var a = b
-	var n = len(b)
-	var i = 0
+	a := b
+	n := len(b)
+	i := 0
 
 	b = b[1:]
 	for {
@@ -610,9 +605,9 @@ func parseArray(b []byte) ([]byte, []byte, error) {
 	}
 
 	var err error
-	var a = b
-	var n = len(b)
-	var i = 0
+	a := b
+	n := len(b)
+	i := 0
 
 	b = b[1:]
 	for {
@@ -729,7 +724,7 @@ func appendToLower(b, s []byte) []byte {
 
 func foldRune(r rune) rune {
 	if r = unicode.SimpleFold(r); 'A' <= r && r <= 'Z' {
-		r = r + ('a' - 'A')
+		r += 'a' - 'A'
 	}
 	return r
 }

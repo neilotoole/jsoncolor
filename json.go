@@ -3,6 +3,7 @@ package jsoncolor
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"reflect"
 	"runtime"
@@ -12,9 +13,6 @@ import (
 
 // Delim is documented at https://golang.org/pkg/encoding/json/#Delim
 type Delim = json.Delim
-
-// InvalidUTF8Error is documented at https://golang.org/pkg/encoding/json/#InvalidUTF8Error
-type InvalidUTF8Error = json.InvalidUTF8Error
 
 // InvalidUnmarshalError is documented at https://golang.org/pkg/encoding/json/#InvalidUnmarshalError
 type InvalidUnmarshalError = json.InvalidUnmarshalError
@@ -36,9 +34,6 @@ type SyntaxError = json.SyntaxError
 
 // Token is documented at https://golang.org/pkg/encoding/json/#Token
 type Token = json.Token
-
-// UnmarshalFieldError is documented at https://golang.org/pkg/encoding/json/#UnmarshalFieldError
-type UnmarshalFieldError = json.UnmarshalFieldError
 
 // UnmarshalTypeError is documented at https://golang.org/pkg/encoding/json/#UnmarshalTypeError
 type UnmarshalTypeError = json.UnmarshalTypeError
@@ -160,7 +155,7 @@ func Indent(dst *bytes.Buffer, src []byte, prefix, indent string) error {
 // Marshal is documented at https://golang.org/pkg/encoding/json/#Marshal
 func Marshal(x interface{}) ([]byte, error) {
 	var err error
-	var buf = encoderBufferPool.Get().(*encoderBuffer)
+	buf := encoderBufferPool.Get().(*encoderBuffer) //nolint:errcheck
 
 	if buf.data, err = Append(buf.data[:0], x, EscapeHTML|SortMapKeys, nil, nil); err != nil {
 		return nil, err
@@ -194,7 +189,8 @@ func MarshalIndent(x interface{}, prefix, indent string) ([]byte, error) {
 func Unmarshal(b []byte, x interface{}) error {
 	r, err := Parse(b, x, 0)
 	if len(r) != 0 {
-		if _, ok := err.(*SyntaxError); !ok {
+		var e *SyntaxError
+		if !errors.As(err, &e) {
 			// The encoding/json package prioritizes reporting errors caused by
 			// unexpected trailing bytes over other issues; here we emulate this
 			// behavior by overriding the error.
@@ -285,21 +281,21 @@ func (dec *Decoder) readValue() (v []byte, err error) {
 			if err == nil {
 				dec.remain, n = skipSpacesN(r)
 				dec.inputOffset += int64(len(v) + n)
-				return
+				return v, nil
 			}
 			if len(r) != 0 {
 				// Parsing of the next JSON value stopped at a position other
 				// than the end of the input buffer, which indicaates that a
 				// syntax error was encountered.
-				return
+				return v, err
 			}
 		}
 
 		if err = dec.err; err != nil {
-			if len(dec.remain) != 0 && err == io.EOF {
+			if len(dec.remain) != 0 && errors.Is(err, io.EOF) {
 				err = io.ErrUnexpectedEOF
 			}
-			return
+			return v, err
 		}
 
 		if dec.buffer == nil {
@@ -321,7 +317,7 @@ func (dec *Decoder) readValue() (v []byte, err error) {
 			if err != nil {
 				err = nil
 			}
-		} else if err == io.ErrUnexpectedEOF {
+		} else if errors.Is(err, io.ErrUnexpectedEOF) {
 			err = io.EOF
 		}
 		dec.remain, n = skipSpacesN(dec.buffer)
@@ -374,7 +370,6 @@ func (dec *Decoder) InputOffset() int64 {
 // Encoder is documented at https://golang.org/pkg/encoding/json/#Encoder
 type Encoder struct {
 	writer  io.Writer
-	buffer  *bytes.Buffer
 	err     error
 	flags   AppendFlags
 	clrs    *Colors
@@ -396,7 +391,7 @@ func (enc *Encoder) Encode(v interface{}) error {
 	}
 
 	var err error
-	var buf = encoderBufferPool.Get().(*encoderBuffer)
+	buf := encoderBufferPool.Get().(*encoderBuffer) //nolint:errcheck
 
 	// Note: unlike the original segmentio encoder, indentation is
 	// performed via the Append function.
@@ -409,8 +404,8 @@ func (enc *Encoder) Encode(v interface{}) error {
 	buf.data = append(buf.data, '\n')
 	b := buf.data
 
-	if _, err := enc.writer.Write(b); err != nil {
-		enc.err = err
+	if _, err2 := enc.writer.Write(b); err2 != nil {
+		enc.err = err2
 	}
 
 	encoderBufferPool.Put(buf)

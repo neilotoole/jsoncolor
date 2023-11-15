@@ -38,7 +38,6 @@ package jsoncolor
 //			...
 //		}
 //	}
-//
 type Tokenizer struct {
 	// When the tokenizer is positioned on a json delimiter this field is not
 	// zero. In this case the possible values are '{', '}', '[', ']', ':', and
@@ -265,14 +264,14 @@ func (v RawValue) Number() bool {
 
 // AppendUnquote writes the unquoted version of the string value in v into b.
 func (v RawValue) AppendUnquote(b []byte) []byte {
-	s, r, new, err := parseStringUnquote([]byte(v), b)
+	s, r, isNew, err := parseStringUnquote([]byte(v), b)
 	if err != nil {
 		panic(err)
 	}
 	if len(r) != 0 {
 		panic(syntaxError(r, "unexpected trailing tokens after json value"))
 	}
-	if new {
+	if isNew {
 		b = s
 	} else {
 		b = append(b, s...)

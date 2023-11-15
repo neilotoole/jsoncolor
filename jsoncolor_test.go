@@ -22,7 +22,6 @@ func TestPackageDropIn(t *testing.T) {
 		_ = jsoncolor.Decoder{}
 		_ = jsoncolor.Delim(0)
 		_ = jsoncolor.Encoder{}
-		_ = jsoncolor.InvalidUTF8Error{}
 		_ = jsoncolor.InvalidUnmarshalError{}
 		_ = jsoncolor.Marshaler(nil)
 		_ = jsoncolor.MarshalerError{}
@@ -30,7 +29,6 @@ func TestPackageDropIn(t *testing.T) {
 		_ = jsoncolor.RawMessage{}
 		_ = jsoncolor.SyntaxError{}
 		_ = jsoncolor.Token(nil)
-		_ = jsoncolor.UnmarshalFieldError{}
 		_ = jsoncolor.UnmarshalTypeError{}
 		_ = jsoncolor.Unmarshaler(nil)
 		_ = jsoncolor.UnsupportedTypeError{}
@@ -47,11 +45,11 @@ func TestPackageDropIn(t *testing.T) {
 			require.NoError(t, readErr)
 
 			// Test json.Valid equivalence
-			var fv1, fv2 = json.Valid, jsoncolor.Valid
+			fv1, fv2 := json.Valid, jsoncolor.Valid
 			require.Equal(t, fv1(b), fv2(b))
 
 			// Test json.Unmarshal equivalence
-			var fu1, fu2 = json.Unmarshal, jsoncolor.Unmarshal
+			fu1, fu2 := json.Unmarshal, jsoncolor.Unmarshal
 			var m1, m2 interface{}
 			err1, err2 := fu1(b, &m1), fu2(b, &m2)
 			require.NoError(t, err1)
@@ -59,7 +57,7 @@ func TestPackageDropIn(t *testing.T) {
 			require.EqualValues(t, m1, m2)
 
 			// Test json.Marshal equivalence
-			var fm1, fm2 = json.Marshal, jsoncolor.Marshal
+			fm1, fm2 := json.Marshal, jsoncolor.Marshal
 			gotMarshalB1, err1 := fm1(m1)
 			require.NoError(t, err1)
 			gotMarshalB2, err2 := fm2(m1)
@@ -67,7 +65,7 @@ func TestPackageDropIn(t *testing.T) {
 			require.Equal(t, gotMarshalB1, gotMarshalB2)
 
 			// Test json.MarshalIndent equivalence
-			var fmi1, fmi2 = json.MarshalIndent, jsoncolor.MarshalIndent
+			fmi1, fmi2 := json.MarshalIndent, jsoncolor.MarshalIndent
 			gotMarshallIndentB1, err1 := fmi1(m1, prefix, indent)
 			require.NoError(t, err1)
 			gotMarshalIndentB2, err2 := fmi2(m1, prefix, indent)
@@ -75,8 +73,8 @@ func TestPackageDropIn(t *testing.T) {
 			require.Equal(t, gotMarshallIndentB1, gotMarshalIndentB2)
 
 			// Test json.Compact equivalence
-			var fc1, fc2 = json.Compact, jsoncolor.Compact
-			var buf1, buf2 = &bytes.Buffer{}, &bytes.Buffer{}
+			fc1, fc2 := json.Compact, jsoncolor.Compact
+			buf1, buf2 := &bytes.Buffer{}, &bytes.Buffer{}
 			err1 = fc1(buf1, gotMarshallIndentB1)
 			require.NoError(t, err1)
 			err2 = fc2(buf2, gotMarshalIndentB2)
@@ -89,7 +87,7 @@ func TestPackageDropIn(t *testing.T) {
 			buf2.Reset()
 
 			// Test json.Indent equivalence
-			var fi1, fi2 = json.Indent, jsoncolor.Indent
+			fi1, fi2 := json.Indent, jsoncolor.Indent
 			err1 = fi1(buf1, gotMarshalB1, prefix, indent)
 			require.NoError(t, err1)
 			err2 = fi2(buf2, gotMarshalB2, prefix, indent)
@@ -99,7 +97,7 @@ func TestPackageDropIn(t *testing.T) {
 			buf2.Reset()
 
 			// Test json.HTMLEscape equivalence
-			var fh1, fh2 = json.HTMLEscape, jsoncolor.HTMLEscape
+			fh1, fh2 := json.HTMLEscape, jsoncolor.HTMLEscape
 			fh1(buf1, gotMarshalB1)
 			fh2(buf2, gotMarshalB2)
 			require.Equal(t, buf1.Bytes(), buf2.Bytes())
@@ -398,7 +396,6 @@ See: https://github.com/neilotoole/jsoncolor/issues/19`)
 
 		name := fmt.Sprintf("size_%d__pretty_%v__color_%v__sort_%v", len(tc.v), tc.pretty, tc.color, tc.sortMap)
 		t.Run(name, func(t *testing.T) {
-
 			buf := &bytes.Buffer{}
 			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
@@ -433,7 +430,6 @@ func TestEncode_BigStruct(t *testing.T) {
 		tc := tc
 
 		t.Run(fmt.Sprintf("pretty_%v__color_%v", tc.pretty, tc.color), func(t *testing.T) {
-
 			buf := &bytes.Buffer{}
 			enc := jsoncolor.NewEncoder(buf)
 			enc.SetEscapeHTML(false)
@@ -457,7 +453,7 @@ func TestEncode_BigStruct(t *testing.T) {
 // has a fast path).
 //
 // NOTE: Currently the encoder is broken wrt colors enabled
-//  for non-string map keys, though that is kinda JSON-illegal anyway.
+// for non-string map keys, though that is kinda JSON-illegal anyway.
 func TestEncode_Map_Not_StringInterface(t *testing.T) {
 	buf := &bytes.Buffer{}
 	enc := jsoncolor.NewEncoder(buf)
