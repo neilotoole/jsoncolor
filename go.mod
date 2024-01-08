@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/fatih/color v1.16.0
 	github.com/mattn/go-colorable v0.1.13
-	golang.org/x/sys v0.14.0
+	golang.org/x/sys v0.16.0
 	golang.org/x/term v0.14.0
 )
 
