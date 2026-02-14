@@ -358,7 +358,7 @@ func TestCodec(t *testing.T) {
 				t.Error("invalid JSON representation")
 			}
 
-			if !bytes.Equal(a, b) {
+			if !jsonBytesEqual(a, b) {
 				t.Error("JSON representations mismatch")
 				t.Log("expected:", string(a))
 				t.Log("found:   ", string(b))
@@ -387,6 +387,32 @@ func TestCodec(t *testing.T) {
 			}
 		})
 	}
+}
+
+// jsonBytesEqual returns true if a and b are semantically equal JSON.
+//
+// Starting in Go 1.22 (specifically CL 521675), the stdlib encoder changed
+// to emit \b and \f for bytes 0x08 and 0x0c, whereas previously it emitted
+// \u0008 and \u000c. This package's encoder still produces the \uNNNN form.
+// Both representations are valid JSON and decode to identical values, so a
+// byte-level comparison would produce false negatives. This function
+// unmarshals both sides and compares the resulting Go values instead.
+func jsonBytesEqual(a, b []byte) bool {
+	var va, vb interface{}
+
+	da := json.NewDecoder(bytes.NewReader(a))
+	da.UseNumber()
+	if err := da.Decode(&va); err != nil {
+		return false
+	}
+
+	db := json.NewDecoder(bytes.NewReader(b))
+	db.UseNumber()
+	if err := db.Decode(&vb); err != nil {
+		return false
+	}
+
+	return reflect.DeepEqual(va, vb)
 }
 
 // TestCodecDuration isolates testing of time.Duration.  The stdlib un/marshals

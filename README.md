@@ -19,7 +19,7 @@ From the example [`jc`](./cmd/jc/main.go) app:
 
 ## Usage
 
-Get the package per the normal mechanism (requires Go 1.16+):
+Get the package per the normal mechanism (requires Go 1.17+):
 
 ```shell
 go get -u github.com/neilotoole/jsoncolor
