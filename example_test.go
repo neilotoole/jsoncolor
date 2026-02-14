@@ -46,9 +46,9 @@ func ExampleEncoder() {
 	}
 }
 
-// ExampleFatihColor shows use of the fatihcolor helper package
+// Example_fatihColor shows use of the fatihcolor helper package
 // with jsoncolor.
-func ExampleFatihColor() {
+func Example_fatihColor() {
 	var enc *json.Encoder
 
 	// Note: this check will fail if running inside Goland (and
