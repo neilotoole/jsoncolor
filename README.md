@@ -215,6 +215,13 @@ History: this package is an extract of [`sq`](https://github.com/neilotoole/sq)'
 original `sq` JSON encoder was forked from Segment's codebase at `v0.1.14`, so
 the codebases have drifted significantly by now.
 
+### [v0.7.2](https://github.com/neilotoole/jsoncolor/releases/tag/v0.7.2)
+
+- [#38](https://github.com/neilotoole/jsoncolor/issues/38): Fix `TestCodec` failure on Go 1.22+ and update CI.
+  - Use semantic JSON comparison in `TestCodec` to handle stdlib escape sequence changes.
+  - Bump minimum Go version from 1.16 to 1.17.
+  - Update CI workflows: expand test matrix to Go 1.17/1.24/1.26, fix `golangci-lint` workflow.
+
 ### [v0.7.1](https://github.com/neilotoole/jsoncolor/releases/tag/v0.7.1)
 
 - [#27](https://github.com/neilotoole/jsoncolor/pull/27): Improved Windows terminal color support checking.
