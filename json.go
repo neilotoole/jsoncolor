@@ -115,7 +115,11 @@ const (
 
 // Append acts like Marshal but appends the json representation to b instead of
 // always reallocating a new slice.
-func Append(b []byte, x interface{}, flags AppendFlags, clrs *Colors, indentr *indenter) ([]byte, error) {
+//
+// The indentr argument controls indentation. Pass nil for compact output, or
+// construct an [Indenter] via [NewIndenter] to indent the output. The clrs
+// argument may be nil to disable colorization.
+func Append(b []byte, x interface{}, flags AppendFlags, clrs *Colors, indentr *Indenter) ([]byte, error) {
 	if x == nil {
 		// Special case for nil values because it makes the rest of the code
 		// simpler to assume that it won't be seeing nil pointers.
@@ -373,7 +377,7 @@ type Encoder struct {
 	err     error
 	flags   AppendFlags
 	clrs    *Colors
-	indentr *indenter
+	indentr *Indenter
 }
 
 // NewEncoder is documented at https://golang.org/pkg/encoding/json/#NewEncoder
@@ -423,7 +427,7 @@ func (enc *Encoder) SetEscapeHTML(on bool) {
 
 // SetIndent is documented at https://golang.org/pkg/encoding/json/#Encoder.SetIndent
 func (enc *Encoder) SetIndent(prefix, indent string) {
-	enc.indentr = newIndenter(prefix, indent)
+	enc.indentr = NewIndenter(prefix, indent)
 }
 
 // SetSortMapKeys is an extension to the standard encoding/json package which
