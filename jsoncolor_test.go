@@ -709,3 +709,33 @@ func TestEncode_Punc_AllGranular(t *testing.T) {
 	require.Equal(t, want, got,
 		"each granular punctuation field should govern exactly its own class")
 }
+
+// TestAppendIndenter verifies that an external caller can construct an
+// Indenter via the exported NewIndenter constructor and pass it to the
+// exported Append function. See issue #37.
+func TestAppendIndenter(t *testing.T) {
+	m := map[string]interface{}{"a": 1}
+
+	// A nil *Indenter produces compact output.
+	var nilIndenter *jsoncolor.Indenter
+	b, err := jsoncolor.Append(nil, m, jsoncolor.EscapeHTML|jsoncolor.SortMapKeys, nil, nilIndenter)
+	require.NoError(t, err)
+	require.Equal(t, `{"a":1}`, string(b))
+
+	// An Indenter constructed via NewIndenter indents the output, matching
+	// the behavior of encoding/json.MarshalIndent.
+	indentr := jsoncolor.NewIndenter("", "  ")
+	b, err = jsoncolor.Append(nil, m, jsoncolor.EscapeHTML|jsoncolor.SortMapKeys, nil, indentr)
+	require.NoError(t, err)
+
+	want, err := stdjson.MarshalIndent(m, "", "  ")
+	require.NoError(t, err)
+	require.Equal(t, string(want), string(b))
+
+	// NewIndenter with empty prefix and indent is equivalent to a nil
+	// Indenter, producing compact output.
+	disabled := jsoncolor.NewIndenter("", "")
+	b, err = jsoncolor.Append(nil, m, jsoncolor.EscapeHTML|jsoncolor.SortMapKeys, nil, disabled)
+	require.NoError(t, err)
+	require.Equal(t, `{"a":1}`, string(b))
+}
