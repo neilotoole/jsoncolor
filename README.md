@@ -217,6 +217,7 @@ the codebases have drifted significantly by now.
 
 ### [v0.8.0](https://github.com/neilotoole/jsoncolor/releases/tag/v0.8.0)
 
+- [#16](https://github.com/neilotoole/jsoncolor/issues/16): Add individually-configurable punctuation color fields — `Colors.Brackets`, `Colors.Braces`, `Colors.Comma`, and `Colors.Colon` — each falling back to `Colors.Punc` when unset, so existing configs are unaffected.
 - Bumped minimum Go version from 1.17 to 1.25.
 - Updated dependencies to latest: `fatih/color` v1.19.0, `mattn/go-colorable` v0.1.14, `golang.org/x/sys` v0.45.0, and `golang.org/x/term` v0.43.0 (plus test-only `stretchr/testify` v1.11.1 and `segmentio/encoding` v0.5.4).
 - Migrated the `golangci-lint` config to the v2 format; CI now runs `golangci-lint` v2.12.2 (action `v8`) and the test matrix targets Go 1.25 and 1.26.
