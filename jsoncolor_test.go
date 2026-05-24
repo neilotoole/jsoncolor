@@ -595,6 +595,121 @@ func TestEncode_TextMarshaler(t *testing.T) {
 		"expected TextMarshaler encoding to use Colors.TextMarshaler")
 }
 
+// puncEncode encodes v with the given Colors and returns the output, using
+// no-HTML-escaping and sorted map keys so output is deterministic.
+func puncEncode(t *testing.T, clrs *jsoncolor.Colors, v interface{}) string {
+	t.Helper()
+	buf := &bytes.Buffer{}
+	enc := jsoncolor.NewEncoder(buf)
+	enc.SetEscapeHTML(false)
+	enc.SetSortMapKeys(true)
+	enc.SetIndent("", "  ")
+	enc.SetColors(clrs)
+	require.NoError(t, enc.Encode(v))
+	return buf.String()
+}
+
+// TestEncode_Punc_OnlyPunc verifies the backward-compatible behavior: when only
+// Colors.Punc is set, all punctuation ([ ] { } , :) is colored with Punc.
+func TestEncode_Punc_OnlyPunc(t *testing.T) {
+	const punc = "\x1b[1m" // bold
+	clrs := &jsoncolor.Colors{Punc: jsoncolor.Color(punc)}
+
+	// Object inside an array exercises [ ] { } , and : .
+	v := []interface{}{
+		map[string]interface{}{"a": 1, "b": 2},
+		3,
+	}
+
+	got := puncEncode(t, clrs, v)
+
+	const reset = "\x1b[0m"
+	// When colors are enabled, keys and scalar values render with an
+	// (empty) color prefix followed by a reset suffix.
+	key := func(s string) string { return "\"" + s + "\"" + reset }
+	val := func(s string) string { return s + reset }
+	// Every structural punctuation char is wrapped with the Punc color.
+	want := punc + "[" + reset + "\n  " +
+		punc + "{" + reset + "\n    " +
+		key("a") + punc + ":" + reset + " " + val("1") + punc + "," + reset + "\n    " +
+		key("b") + punc + ":" + reset + " " + val("2") + "\n  " +
+		punc + "}" + reset + punc + "," + reset + "\n  " +
+		val("3") + "\n" +
+		punc + "]" + reset + "\n"
+
+	require.Equal(t, want, got,
+		"setting only Punc should color all punctuation identically")
+}
+
+// TestEncode_Punc_GranularOverride verifies that a granular field overrides only
+// its punctuation class, while the remaining classes fall back to Punc.
+func TestEncode_Punc_GranularOverride(t *testing.T) {
+	const (
+		punc     = "\x1b[1m"  // bold (fallback)
+		brackets = "\x1b[31m" // red (override for [ ])
+		reset    = "\x1b[0m"
+	)
+	clrs := &jsoncolor.Colors{
+		Punc:     jsoncolor.Color(punc),
+		Brackets: jsoncolor.Color(brackets),
+	}
+
+	v := []interface{}{
+		map[string]interface{}{"a": 1},
+	}
+
+	got := puncEncode(t, clrs, v)
+
+	key := func(s string) string { return "\"" + s + "\"" + reset }
+	val := func(s string) string { return s + reset }
+	// Brackets use the granular color; braces, comma and colon fall back to Punc.
+	want := brackets + "[" + reset + "\n  " +
+		punc + "{" + reset + "\n    " +
+		key("a") + punc + ":" + reset + " " + val("1") + "\n  " +
+		punc + "}" + reset + "\n" +
+		brackets + "]" + reset + "\n"
+
+	require.Equal(t, want, got,
+		"Brackets should override only [ and ]; other punctuation falls back to Punc")
+}
+
+// TestEncode_Punc_AllGranular verifies that each granular field governs exactly
+// its own punctuation class when all of them are set.
+func TestEncode_Punc_AllGranular(t *testing.T) {
+	const (
+		brackets = "\x1b[31m" // [ ]
+		braces   = "\x1b[32m" // { }
+		comma    = "\x1b[33m" // ,
+		colon    = "\x1b[34m" // :
+		reset    = "\x1b[0m"
+	)
+	clrs := &jsoncolor.Colors{
+		// Punc deliberately unset; every class has its own color.
+		Brackets: jsoncolor.Color(brackets),
+		Braces:   jsoncolor.Color(braces),
+		Comma:    jsoncolor.Color(comma),
+		Colon:    jsoncolor.Color(colon),
+	}
+
+	v := []interface{}{
+		map[string]interface{}{"a": 1, "b": 2},
+	}
+
+	got := puncEncode(t, clrs, v)
+
+	key := func(s string) string { return "\"" + s + "\"" + reset }
+	val := func(s string) string { return s + reset }
+	want := brackets + "[" + reset + "\n  " +
+		braces + "{" + reset + "\n    " +
+		key("a") + colon + ":" + reset + " " + val("1") + comma + "," + reset + "\n    " +
+		key("b") + colon + ":" + reset + " " + val("2") + "\n  " +
+		braces + "}" + reset + "\n" +
+		brackets + "]" + reset + "\n"
+
+	require.Equal(t, want, got,
+		"each granular punctuation field should govern exactly its own class")
+}
+
 // TestAppendIndenter verifies that an external caller can construct an
 // Indenter via the exported NewIndenter constructor and pass it to the
 // exported Append function. See issue #37.
