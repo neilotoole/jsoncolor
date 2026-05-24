@@ -788,16 +788,20 @@ func (e encoder) encodeUnsupportedTypeError(b []byte, _ unsafe.Pointer, t reflec
 	return b, &UnsupportedTypeError{Type: t}
 }
 
-// encodeRawMessage encodes a RawMessage to bytes. Unfortunately, this
-// implementation has a deficiency: it uses Unmarshal to build an
-// object from the RawMessage, which in the case of a struct, results
-// in a map being constructed, and thus the order of the keys is not
-// guaranteed to be maintained. A superior implementation would decode and
-// then re-encode (with color/indentation) the basic JSON tokens on the fly.
-// Note also that if TrustRawMessage is set, and the RawMessage is
-// invalid JSON (cannot be parsed by Unmarshal), then this function
-// falls back to encodeRawMessageNoParseTrusted, which seems to exhibit the
-// correct behavior. It's a bit of a mess, but seems to do the trick.
+// encodeRawMessage encodes a RawMessage to b, applying colorization and
+// indentation as configured on the encoder.
+//
+// The message is re-encoded by walking its JSON tokens on the fly (via
+// [Tokenizer]) and emitting them in source order. This is important for two
+// reasons: it preserves the original ordering of object keys (an earlier
+// implementation round-tripped the message through a map[string]interface{},
+// which reordered keys nondeterministically; see issue #19), and it allows the
+// individual tokens (keys, strings, numbers, etc.) to be colorized.
+//
+// When TrustRawMessage is set the message bytes are emitted without an upfront
+// validity check. If such a message turns out to be malformed and cannot be
+// tokenized, encodeRawMessage honors the "trust" contract by emitting the raw
+// bytes verbatim (uncolorized) rather than returning an error.
 func (e encoder) encodeRawMessage(b []byte, p unsafe.Pointer) ([]byte, error) {
 	v := *(*RawMessage)(p)
 
@@ -805,11 +809,10 @@ func (e encoder) encodeRawMessage(b []byte, p unsafe.Pointer) ([]byte, error) {
 		return e.clrs.appendNull(b), nil
 	}
 
-	var s []byte
+	trusted := (e.flags & TrustRawMessage) != 0
 
-	if (e.flags & TrustRawMessage) != 0 {
-		s = v
-	} else {
+	s := []byte(v)
+	if !trusted {
 		var err error
 		s, _, err = parseValue(v)
 		if err != nil {
@@ -817,67 +820,182 @@ func (e encoder) encodeRawMessage(b []byte, p unsafe.Pointer) ([]byte, error) {
 		}
 	}
 
-	var x interface{}
-	if err := Unmarshal(s, &x); err != nil {
-		return e.encodeRawMessageNoParseTrusted(b, p)
+	b, err := e.appendRawMessageTokens(b, s)
+	if err != nil && trusted {
+		// The message was trusted but is not well-formed JSON. Per the
+		// TrustRawMessage contract, emit the bytes verbatim without validation
+		// or colorization.
+		return e.appendRawMessageVerbatim(b, s)
 	}
-
-	return Append(b, x, e.flags, e.clrs, e.indentr)
+	return b, err
 }
 
-// encodeRawMessageNoParseTrusted is a fallback method that is
-// used by encodeRawMessage if it fails to parse a trusted RawMessage.
-// The (invalid) JSON produced by this method is not colorized.
-// This method may have wonky logic or even bugs in it; little effort
-// has been expended on it because it's a rarely visited edge case.
-func (e encoder) encodeRawMessageNoParseTrusted(b []byte, p unsafe.Pointer) ([]byte, error) {
-	v := *(*RawMessage)(p)
-
-	if v == nil {
-		return e.clrs.appendNull(b), nil
-	}
-
-	var s []byte
-
-	if (e.flags & TrustRawMessage) != 0 {
-		s = v
-	} else {
-		var err error
-		s, _, err = parseValue(v)
-		if err != nil {
-			return b, &UnsupportedValueError{Value: reflect.ValueOf(v), Str: err.Error()}
-		}
-	}
-
-	if e.indentr == nil {
+// appendRawMessageVerbatim appends a (possibly malformed) trusted RawMessage to
+// b without colorization. It applies HTML escaping when EscapeHTML is set, and
+// best-effort indentation when an indenter is configured.
+func (e encoder) appendRawMessageVerbatim(b, s []byte) ([]byte, error) {
+	if e.indentr == nil || e.indentr.disabled {
 		if (e.flags & EscapeHTML) != 0 {
 			return appendCompactEscapeHTML(b, s), nil
 		}
-
 		return append(b, s...), nil
 	}
 
-	// In order to get the tests inherited from the original segmentio
-	// encoder to work, we need to support indentation.
-
-	// This below is sloppy, but seems to work.
 	if (e.flags & EscapeHTML) != 0 {
 		s = appendCompactEscapeHTML(nil, s)
 	}
 
-	// The "prefix" arg to Indent is the current indentation.
+	// Indent reproduces the standard library's indentation. The "prefix" arg is
+	// the current indentation. If s is malformed, Indent fails; fall back to
+	// appending the bytes unchanged.
 	pre := e.indentr.appendIndent(nil)
-
 	buf := &bytes.Buffer{}
-	// And now we just make use of the existing Indent function.
-	err := Indent(buf, s, string(pre), e.indentr.indent)
-	if err != nil {
-		return b, err
+	if err := Indent(buf, s, string(pre), e.indentr.indent); err != nil {
+		return append(b, s...), nil //nolint:nilerr
 	}
 
-	s = buf.Bytes()
+	return append(b, buf.Bytes()...), nil
+}
 
-	return append(b, s...), nil
+// rawFrame tracks the state of one open container (object or array) while
+// re-encoding a RawMessage. count is the number of elements (object members or
+// array elements) emitted so far in this container.
+type rawFrame struct {
+	isObject bool
+	count    int
+}
+
+// appendRawMessageTokens re-encodes the JSON in s, appending the result to b.
+// It preserves the source ordering of object keys while applying the
+// encoder's colorization and indentation. The output is byte-for-byte
+// deterministic for a given input.
+//
+// The layout (placement of newlines, indentation, commas, and the space after
+// a colon) mirrors that produced by encodeMap and encodeArray, so that a
+// RawMessage is rendered identically to an equivalent natively-encoded value.
+func (e encoder) appendRawMessageTokens(b, s []byte) ([]byte, error) {
+	start := len(b)
+
+	stack := make([]rawFrame, 0, 8)
+
+	tok := NewTokenizer(s)
+	for tok.Next() {
+		d := tok.Delim
+
+		switch d {
+		case ':':
+			b = e.clrs.appendPunc(b, ':')
+			b = e.indentr.appendByte(b, ' ')
+			continue
+		case ',':
+			// Element separators are emitted as part of the prefix of the
+			// element that follows; nothing to do here.
+			continue
+		case '}', ']':
+			// Close the current container. If it had any elements, the closing
+			// delimiter goes on its own line at the parent's indentation.
+			top := len(stack) - 1
+			had := top >= 0 && stack[top].count > 0
+			if top >= 0 {
+				stack = stack[:top]
+			}
+			e.indentr.pop()
+			if had {
+				b = e.indentr.appendByte(b, '\n')
+				b = e.indentr.appendIndent(b)
+			}
+			b = e.clrs.appendPunc(b, tok.Value[0])
+			continue
+		}
+
+		// At this point the token starts a value: either a scalar
+		// (string/number/bool/null), an object key, or an opening delimiter.
+		// Emit the leading comma/newline/indentation if it begins a new line
+		// (an object key or an array element), then the token itself.
+		isKey := d == 0 && tok.IsKey
+		b = e.appendRawMessageItemPrefix(b, stack, isKey)
+
+		switch d {
+		case '{', '[':
+			b = e.clrs.appendPunc(b, tok.Value[0])
+			e.indentr.push()
+			stack = append(stack, rawFrame{isObject: d == '{'})
+		default:
+			b = e.appendRawMessageScalar(b, tok.Value, isKey)
+		}
+	}
+
+	if tok.Err != nil {
+		return b[:start], tok.Err
+	}
+
+	return b, nil
+}
+
+// appendRawMessageItemPrefix emits the punctuation and whitespace that precede
+// an item that begins a new line: object keys and array elements. Object
+// member values (which follow a colon) and the top-level value are emitted
+// inline, so they receive no prefix. The first item in a container is preceded
+// by a newline+indent; subsequent items are additionally separated from the
+// previous item by a comma.
+func (e encoder) appendRawMessageItemPrefix(b []byte, stack []rawFrame, isKey bool) []byte {
+	top := len(stack) - 1
+	if top < 0 {
+		// Top-level value; no surrounding container.
+		return b
+	}
+
+	frame := &stack[top]
+	if frame.isObject && !isKey {
+		// An object member value: emitted inline after the colon.
+		return b
+	}
+
+	if frame.count > 0 {
+		b = e.clrs.appendPunc(b, ',')
+	}
+	frame.count++
+
+	b = e.indentr.appendByte(b, '\n')
+	b = e.indentr.appendIndent(b)
+	return b
+}
+
+// appendRawMessageScalar appends a single colorized scalar token to b. The
+// token bytes v are the raw JSON representation (e.g. a quoted string,
+// number, true/false, or null). isKey reports whether the token is an object
+// key, which is colorized using the Key color rather than the value colors.
+func (e encoder) appendRawMessageScalar(b []byte, v RawValue, isKey bool) []byte {
+	escapeHTML := (e.flags & EscapeHTML) != 0
+
+	if e.clrs == nil {
+		if escapeHTML && v.String() {
+			return appendCompactEscapeHTML(b, v)
+		}
+		return append(b, v...)
+	}
+
+	var clr Color
+	switch {
+	case isKey:
+		clr = e.clrs.Key
+	case v.String():
+		clr = e.clrs.String
+	case v.Number():
+		clr = e.clrs.Number
+	case v.True(), v.False():
+		clr = e.clrs.Bool
+	case v.Null():
+		clr = e.clrs.Null
+	}
+
+	b = append(b, clr...)
+	if escapeHTML && v.String() {
+		b = appendCompactEscapeHTML(b, v)
+	} else {
+		b = append(b, v...)
+	}
+	return append(b, ansiReset...)
 }
 
 // encodeJSONMarshaler suffers from the same defect as encodeRawMessage; it
