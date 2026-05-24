@@ -794,7 +794,7 @@ func (r *eofReader) Read(p []byte) (n int, err error) {
 	if r.s == "" {
 		err = io.EOF
 	}
-	return
+	return n, err
 }
 
 func TestDontMatchCaseIncensitiveStructFields(t *testing.T) {

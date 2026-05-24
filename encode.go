@@ -890,13 +890,14 @@ func (e encoder) encodeJSONMarshaler(b []byte, p unsafe.Pointer, t reflect.Type,
 	}
 
 	switch v.Kind() {
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Pointer, reflect.Interface:
 		if v.IsNil() {
 			return e.clrs.appendNull(b), nil
 		}
 	}
 
-	j, err := v.Interface().(Marshaler).MarshalJSON()
+	m, _ := v.Interface().(Marshaler)
+	j, err := m.MarshalJSON()
 	if err != nil {
 		return b, err
 	}
@@ -913,13 +914,14 @@ func (e encoder) encodeTextMarshaler(b []byte, p unsafe.Pointer, t reflect.Type,
 	}
 
 	switch v.Kind() {
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Pointer, reflect.Interface:
 		if v.IsNil() {
 			return e.clrs.appendNull(b), nil
 		}
 	}
 
-	s, err := v.Interface().(encoding.TextMarshaler).MarshalText()
+	tm, _ := v.Interface().(encoding.TextMarshaler)
+	s, err := tm.MarshalText()
 	if err != nil {
 		return b, err
 	}

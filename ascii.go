@@ -85,7 +85,7 @@ func asciiValidPrint(b []byte) bool {
 	default:
 		return true
 	}
-	return !(hasLess32(x, 0x20) || hasMore32(x, 0x7e))
+	return !hasLess32(x, 0x20) && !hasMore32(x, 0x7e)
 }
 
 // https://graphics.stanford.edu/~seander/bithacks.html#HasLessInWord

@@ -50,8 +50,8 @@ func parseInt(b []byte, t reflect.Type) (int64, []byte, error) {
 	}
 
 	if b[0] == '-' {
-		const max = math.MinInt64
-		const lim = max / 10
+		const maxVal = math.MinInt64
+		const lim = maxVal / 10
 
 		if len(b) == 1 {
 			return 0, b, syntaxError(b, "cannot decode integer from '-'")
@@ -62,7 +62,7 @@ func parseInt(b []byte, t reflect.Type) (int64, []byte, error) {
 		}
 
 		for _, d := range b[1:] {
-			if !(d >= '0' && d <= '9') {
+			if d < '0' || d > '9' {
 				if count == 0 {
 					bs, err := inputError(b, t)
 					return 0, bs, err
@@ -77,7 +77,7 @@ func parseInt(b []byte, t reflect.Type) (int64, []byte, error) {
 			value *= 10
 			x := int64(d - '0')
 
-			if value < (max + x) {
+			if value < (maxVal + x) {
 				return 0, b, unmarshalOverflow(b, t)
 			}
 
@@ -87,15 +87,15 @@ func parseInt(b []byte, t reflect.Type) (int64, []byte, error) {
 
 		count++
 	} else {
-		const max = math.MaxInt64
-		const lim = max / 10
+		const maxVal = math.MaxInt64
+		const lim = maxVal / 10
 
 		if len(b) > 1 && b[0] == '0' && '0' <= b[1] && b[1] <= '9' {
 			return 0, b, syntaxError(b, "invalid leading character '0' in integer")
 		}
 
 		for _, d := range b {
-			if !(d >= '0' && d <= '9') {
+			if d < '0' || d > '9' {
 				if count == 0 {
 					bs, err := inputError(b, t)
 					return 0, bs, err
@@ -108,7 +108,7 @@ func parseInt(b []byte, t reflect.Type) (int64, []byte, error) {
 				return 0, b, unmarshalOverflow(b, t)
 			}
 
-			if value *= 10; value > (max - x) {
+			if value *= 10; value > (maxVal - x) {
 				return 0, b, unmarshalOverflow(b, t)
 			}
 
@@ -133,8 +133,8 @@ func parseInt(b []byte, t reflect.Type) (int64, []byte, error) {
 
 // parseUint is like parseInt but for unsigned integers.
 func parseUint(b []byte, t reflect.Type) (uint64, []byte, error) {
-	const max = math.MaxUint64
-	const lim = max / 10
+	const maxVal = math.MaxUint64
+	const lim = maxVal / 10
 
 	var value uint64
 	var count int
@@ -148,7 +148,7 @@ func parseUint(b []byte, t reflect.Type) (uint64, []byte, error) {
 	}
 
 	for _, d := range b {
-		if !(d >= '0' && d <= '9') {
+		if d < '0' || d > '9' {
 			if count == 0 {
 				bs, err := inputError(b, t)
 				return 0, bs, err
@@ -161,7 +161,7 @@ func parseUint(b []byte, t reflect.Type) (uint64, []byte, error) {
 			return 0, b, unmarshalOverflow(b, t)
 		}
 
-		if value *= 10; value > (max - x) {
+		if value *= 10; value > (maxVal - x) {
 			return 0, b, unmarshalOverflow(b, t)
 		}
 
@@ -192,8 +192,8 @@ func parseUint(b []byte, t reflect.Type) (uint64, []byte, error) {
 // Because it only works with base 16 the function is also significantly faster
 // than strconv.ParseUint.
 func parseUintHex(b []byte) (uint64, []byte, error) {
-	const max = math.MaxUint64
-	const lim = max / 0x10
+	const maxVal = math.MaxUint64
+	const lim = maxVal / 0x10
 
 	var value uint64
 	var count int
@@ -227,7 +227,7 @@ parseLoop:
 			return 0, b, syntaxError(b, "hexadecimal value out of range")
 		}
 
-		if value *= 0x10; value > (max - x) {
+		if value *= 0x10; value > (maxVal - x) {
 			return 0, b, syntaxError(b, "hexadecimal value out of range")
 		}
 
@@ -313,7 +313,7 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 		decimalStart := i
 
 		for i < len(b) {
-			if c := b[i]; !('0' <= c && c <= '9') {
+			if c := b[i]; c < '0' || c > '9' {
 				if i == decimalStart {
 					r, err = b[i:], syntaxError(b, "expected digit but found '%c'", c)
 					return v, r, err
@@ -347,7 +347,7 @@ func parseNumber(b []byte) (v, r []byte, err error) {
 		exponentStart := i
 
 		for i < len(b) {
-			if c := b[i]; !('0' <= c && c <= '9') {
+			if c := b[i]; c < '0' || c > '9' {
 				if i == exponentStart {
 					err = syntaxError(b, "expected digit but found '%c'", c)
 					return v, r, err
@@ -376,7 +376,7 @@ func parseUnicode(b []byte) (rune, int, error) {
 		return 0, 0, syntaxError(b, "invalid unicode code point")
 	}
 
-	return rune(u), 4, nil
+	return rune(u), 4, nil //nolint:gosec // u is at most 0xFFFF (4 hex digits), always a valid rune
 }
 
 func parseStringFast(b []byte) ([]byte, []byte, bool, error) {

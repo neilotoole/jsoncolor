@@ -15,7 +15,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -71,7 +70,7 @@ func doMain() error {
 		}
 		defer f.Close()
 
-		if input, err = ioutil.ReadAll(f); err != nil {
+		if input, err = io.ReadAll(f); err != nil {
 			return err
 		}
 	} else {
@@ -83,7 +82,7 @@ func doMain() error {
 
 		if (fi.Mode() & os.ModeCharDevice) == 0 {
 			// Read from stdin
-			if input, err = ioutil.ReadAll(os.Stdin); err != nil {
+			if input, err = io.ReadAll(os.Stdin); err != nil {
 				return err
 			}
 		} else {
@@ -123,7 +122,8 @@ func doMain() error {
 	var enc *json.Encoder
 
 	if flagColorize != nil && *flagColorize && json.IsColorTerminal(out) {
-		out = colorable.NewColorable(out.(*os.File)) // colorable is needed for Windows
+		outFile, _ := out.(*os.File)
+		out = colorable.NewColorable(outFile) // colorable is needed for Windows
 		enc = json.NewEncoder(out)
 		clrs := json.DefaultColors()
 		enc.SetColors(clrs)
