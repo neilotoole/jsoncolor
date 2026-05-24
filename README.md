@@ -217,6 +217,7 @@ the codebases have drifted significantly by now.
 
 ### [v0.8.0](https://github.com/neilotoole/jsoncolor/releases/tag/v0.8.0)
 
+- [#19](https://github.com/neilotoole/jsoncolor/issues/19): Fix nondeterministic object key order when encoding `RawMessage`. Values are now re-encoded via on-the-fly tokenization, preserving source key order, instead of round-tripping through a `map`.
 - Bumped minimum Go version from 1.17 to 1.25.
 - Updated dependencies to latest: `fatih/color` v1.19.0, `mattn/go-colorable` v0.1.14, `golang.org/x/sys` v0.45.0, and `golang.org/x/term` v0.43.0 (plus test-only `stretchr/testify` v1.11.1 and `segmentio/encoding` v0.5.4).
 - Migrated the `golangci-lint` config to the v2 format; CI now runs `golangci-lint` v2.12.2 (action `v8`) and the test matrix targets Go 1.25 and 1.26.
