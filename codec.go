@@ -66,7 +66,7 @@ func typeid(t reflect.Type) unsafe.Pointer {
 }
 
 func constructCachedCodec(t reflect.Type, cache map[unsafe.Pointer]codec) codec {
-	c := constructCodec(t, map[reflect.Type]*structType{}, t.Kind() == reflect.Ptr)
+	c := constructCodec(t, map[reflect.Type]*structType{}, t.Kind() == reflect.Pointer)
 
 	if inlined(t) {
 		c.encode = constructInlineValueEncodeFunc(c.encode)
@@ -177,14 +177,14 @@ func constructCodec(t reflect.Type, seen map[reflect.Type]*structType, canAddr b
 	case reflect.Struct:
 		c = constructStructCodec(t, seen, canAddr)
 
-	case reflect.Ptr:
+	case reflect.Pointer:
 		c = constructPointerCodec(t, seen)
 
 	default:
 		c = constructUnsupportedTypeCodec(t)
 	}
 
-	p := reflect.PtrTo(t)
+	p := reflect.PointerTo(t)
 
 	if canAddr {
 		switch {
@@ -270,7 +270,7 @@ func constructSliceCodec(t reflect.Type, seen map[reflect.Type]*structType) code
 		// Go 1.7+ behavior: slices of byte types (and aliases) may override the
 		// default encoding and decoding behaviors by implementing marshaler and
 		// unmarshaler interfaces.
-		p := reflect.PtrTo(e)
+		p := reflect.PointerTo(e)
 		c := codec{}
 
 		switch {
@@ -352,7 +352,7 @@ func constructMapCodec(t reflect.Type, seen map[reflect.Type]*structType) codec 
 	kc := codec{}
 	vc := constructCodec(v, seen, false)
 
-	if k.Implements(textMarshalerType) || reflect.PtrTo(k).Implements(textUnmarshalerType) {
+	if k.Implements(textMarshalerType) || reflect.PointerTo(k).Implements(textUnmarshalerType) {
 		kc.encode = constructTextMarshalerEncodeFunc(k, false)
 		kc.decode = constructTextUnmarshalerDecodeFunc(k, true)
 
@@ -360,8 +360,10 @@ func constructMapCodec(t reflect.Type, seen map[reflect.Type]*structType) codec 
 			sort.Slice(keys, func(i, j int) bool {
 				// This is a performance abomination but the use case is rare
 				// enough that it shouldn't be a problem in practice.
-				k1, _ := keys[i].Interface().(encoding.TextMarshaler).MarshalText()
-				k2, _ := keys[j].Interface().(encoding.TextMarshaler).MarshalText()
+				tm1, _ := keys[i].Interface().(encoding.TextMarshaler)
+				tm2, _ := keys[j].Interface().(encoding.TextMarshaler)
+				k1, _ := tm1.MarshalText()
+				k2, _ := tm2.MarshalText()
 				return string(k1) < string(k2)
 			})
 		}
@@ -553,7 +555,7 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 
 		if anonymous && !isTag { // embedded
 			typ := f.Type
-			ptr := f.Type.Kind() == reflect.Ptr
+			ptr := f.Type.Kind() == reflect.Pointer
 
 			if ptr {
 				typ = f.Type.Elem()
@@ -612,7 +614,7 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 	for _, embfield := range embedded {
 		subfield := *embfield.subfield
 
-		if ambiguousNames[subfield.name] > 1 && !(subfield.tag && ambiguousTags[subfield.name] == 1) {
+		if ambiguousNames[subfield.name] > 1 && (!subfield.tag || ambiguousTags[subfield.name] != 1) {
 			continue // ambiguous embedded field
 		}
 
@@ -673,7 +675,7 @@ func stringify(f *reflect.StructField, c codec) codec {
 	// programs:
 	typ := f.Type
 
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
 
@@ -826,7 +828,7 @@ func align(align, size uintptr) uintptr {
 
 func inlined(t reflect.Type) bool {
 	switch t.Kind() {
-	case reflect.Ptr:
+	case reflect.Pointer:
 		return true
 	case reflect.Map:
 		return true
@@ -904,7 +906,7 @@ func emptyFuncOf(t reflect.Type) emptyFunc {
 	case reflect.Float64:
 		return func(p unsafe.Pointer) bool { return *(*float64)(p) == 0 }
 
-	case reflect.Ptr:
+	case reflect.Pointer:
 		return func(p unsafe.Pointer) bool { return *(*unsafe.Pointer)(p) == nil }
 
 	case reflect.Interface:
@@ -1008,11 +1010,7 @@ func uintStringsAreSorted(u0, u1 uint64) bool {
 
 //go:nosplit
 func stringToBytes(s string) []byte {
-	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{ //nolint:govet // from segment's code
-		Data: ((*reflect.StringHeader)(unsafe.Pointer(&s))).Data,
-		Len:  len(s),
-		Cap:  len(s),
-	}))
+	return unsafe.Slice(unsafe.StringData(s), len(s))
 }
 
 var (
@@ -1042,10 +1040,10 @@ var (
 	timeType       = reflect.TypeOf(time.Time{})
 	rawMessageType = reflect.TypeOf(RawMessage(nil))
 
-	numberPtrType     = reflect.PtrTo(numberType)
-	durationPtrType   = reflect.PtrTo(durationType)
-	timePtrType       = reflect.PtrTo(timeType)
-	rawMessagePtrType = reflect.PtrTo(rawMessageType)
+	numberPtrType     = reflect.PointerTo(numberType)
+	durationPtrType   = reflect.PointerTo(durationType)
+	timePtrType       = reflect.PointerTo(timeType)
+	rawMessagePtrType = reflect.PointerTo(rawMessageType)
 
 	sliceInterfaceType      = reflect.TypeOf(([]interface{})(nil))
 	mapStringInterfaceType  = reflect.TypeOf((map[string]interface{})(nil))

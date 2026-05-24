@@ -971,7 +971,7 @@ func (d decoder) decodeEmbeddedStructPointer(b []byte, p unsafe.Pointer, t refle
 func (d decoder) decodePointer(b []byte, p unsafe.Pointer, t reflect.Type, decode decodeFunc) ([]byte, error) {
 	if hasNullPrefix(b) {
 		pp := *(*unsafe.Pointer)(p)
-		if pp != nil && t.Kind() == reflect.Ptr {
+		if pp != nil && t.Kind() == reflect.Pointer {
 			return decode(d, b, pp)
 		}
 		*(*unsafe.Pointer)(p) = nil
@@ -991,8 +991,8 @@ func (d decoder) decodeInterface(b []byte, p unsafe.Pointer) ([]byte, error) {
 	val := *(*interface{})(p)
 	*(*interface{})(p) = nil
 
-	if t := reflect.TypeOf(val); t != nil && t.Kind() == reflect.Ptr {
-		if v := reflect.ValueOf(val); v.IsNil() || t.Elem().Kind() != reflect.Ptr {
+	if t := reflect.TypeOf(val); t != nil && t.Kind() == reflect.Pointer {
+		if v := reflect.ValueOf(val); v.IsNil() || t.Elem().Kind() != reflect.Pointer {
 			// If the destination is nil the only value that is OK to decode is
 			// `null`, and the encoding/json package always nils the destination
 			// interface value in this case.
@@ -1073,7 +1073,7 @@ func (d decoder) decodeMaybeEmptyInterface(b []byte, p unsafe.Pointer, t reflect
 	}
 
 	if x := reflect.NewAt(t, p).Elem(); !x.IsNil() {
-		if e := x.Elem(); e.Kind() == reflect.Ptr {
+		if e := x.Elem(); e.Kind() == reflect.Pointer {
 			return Parse(b, e.Interface(), d.flags)
 		}
 	} else if t.NumMethod() == 0 { // empty interface
@@ -1126,7 +1126,8 @@ func (d decoder) decodeJSONUnmarshaler(b []byte, p unsafe.Pointer, t reflect.Typ
 	if u.IsNil() {
 		u.Set(reflect.New(t))
 	}
-	return b, u.Interface().(Unmarshaler).UnmarshalJSON(v)
+	um, _ := u.Interface().(Unmarshaler)
+	return b, um.UnmarshalJSON(v)
 }
 
 func (d decoder) decodeTextUnmarshaler(b []byte, p unsafe.Pointer, t reflect.Type, pointer bool) ([]byte, error) {
@@ -1157,7 +1158,8 @@ func (d decoder) decodeTextUnmarshaler(b []byte, p unsafe.Pointer, t reflect.Typ
 		if u.IsNil() {
 			u.Set(reflect.New(t))
 		}
-		return b, u.Interface().(encoding.TextUnmarshaler).UnmarshalText(s)
+		tu, _ := u.Interface().(encoding.TextUnmarshaler)
+		return b, tu.UnmarshalText(s)
 	case '{':
 		value = "object"
 	case '[':
@@ -1170,5 +1172,5 @@ func (d decoder) decodeTextUnmarshaler(b []byte, p unsafe.Pointer, t reflect.Typ
 		value = "number"
 	}
 
-	return b, &UnmarshalTypeError{Value: value, Type: reflect.PtrTo(t)}
+	return b, &UnmarshalTypeError{Value: value, Type: reflect.PointerTo(t)}
 }

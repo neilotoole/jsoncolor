@@ -58,7 +58,7 @@ func tokenize(b []byte) (tokens []token) {
 		panic(t.Err)
 	}
 
-	return
+	return tokens
 }
 
 func TestTokenizer(t *testing.T) {

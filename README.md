@@ -215,6 +215,13 @@ History: this package is an extract of [`sq`](https://github.com/neilotoole/sq)'
 original `sq` JSON encoder was forked from Segment's codebase at `v0.1.14`, so
 the codebases have drifted significantly by now.
 
+### [v0.8.0](https://github.com/neilotoole/jsoncolor/releases/tag/v0.8.0)
+
+- Bumped minimum Go version from 1.17 to 1.25.
+- Updated dependencies to latest: `fatih/color` v1.19.0, `mattn/go-colorable` v0.1.14, `golang.org/x/sys` v0.45.0, and `golang.org/x/term` v0.43.0 (plus test-only `stretchr/testify` v1.11.1 and `segmentio/encoding` v0.5.4).
+- Migrated the `golangci-lint` config to the v2 format; CI now runs `golangci-lint` v2.12.2 (action `v8`) and the test matrix targets Go 1.25 and 1.26.
+- Modernized internal code to satisfy the updated linters (e.g. `reflect.Ptr`→`reflect.Pointer`, `io/ioutil`→`io`, `unsafe.Slice`/`unsafe.StringData` for string/byte conversion). No behavior change.
+
 ### [v0.7.2](https://github.com/neilotoole/jsoncolor/releases/tag/v0.7.2)
 
 - [#38](https://github.com/neilotoole/jsoncolor/issues/38): Fix `TestCodec` failure on Go 1.22+ and update CI.
