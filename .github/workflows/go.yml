@@ -13,10 +13,10 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        # go1.17 is the minimum version specified in go.mod. The newer
-        # versions verify the package still compiles and passes tests
+        # go1.25 is the minimum version specified in go.mod. The newer
+        # version verifies the package still compiles and passes tests
         # on recent toolchains.
-        go-version: ['1.17', '1.24', '1.26']
+        go-version: ['1.25', '1.26']
 
     runs-on: ${{ matrix.os }}
 
