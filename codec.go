@@ -23,7 +23,7 @@ type codec struct {
 type encoder struct {
 	flags   AppendFlags
 	clrs    *Colors
-	indentr *indenter
+	indentr *Indenter
 }
 type decoder struct{ flags ParseFlags }
 

@@ -1117,22 +1117,27 @@ func appendCompactEscapeHTML(dst, src []byte) []byte {
 	return dst
 }
 
-// indenter is used to indent JSON. The push and pop methods
-// change indentation level. The appendIndent method appends the
-// computed indentation. The appendByte method appends a byte. All
-// methods are safe to use with a nil receiver.
-type indenter struct {
+// Indenter is used to indent JSON, controlling the prefix and indent
+// strings applied at each nesting level. Construct an Indenter with
+// [NewIndenter], and pass it (or nil for no indentation) to [Append].
+//
+// A nil *Indenter is valid and disables indentation, producing compact
+// output. All Indenter methods are safe to use with a nil receiver.
+type Indenter struct {
 	disabled bool
 	prefix   string
 	indent   string
 	depth    int
 }
 
-// newIndenter returns a new indenter instance. If prefix and
-// indent are both empty, the indenter is effectively disabled,
-// and the appendIndent and appendByte methods are no-op.
-func newIndenter(prefix, indent string) *indenter {
-	return &indenter{
+// NewIndenter returns a new Indenter instance for use with [Append]. The
+// prefix is prepended to each indented line, and indent is repeated once
+// per nesting level, matching the semantics of [Encoder.SetIndent] and
+// [encoding/json.Encoder.SetIndent]. If prefix and indent are both empty,
+// the Indenter is effectively disabled, and the resulting JSON is compact
+// (equivalent to passing a nil *Indenter to Append).
+func NewIndenter(prefix, indent string) *Indenter {
+	return &Indenter{
 		disabled: prefix == "" && indent == "",
 		prefix:   prefix,
 		indent:   indent,
@@ -1140,22 +1145,22 @@ func newIndenter(prefix, indent string) *indenter {
 }
 
 // push increases the indentation level.
-func (in *indenter) push() {
+func (in *Indenter) push() {
 	if in != nil {
 		in.depth++
 	}
 }
 
 // pop decreases the indentation level.
-func (in *indenter) pop() {
+func (in *Indenter) pop() {
 	if in != nil {
 		in.depth--
 	}
 }
 
-// appendByte appends a to b if the indenter is non-nil and enabled.
+// appendByte appends a to b if the Indenter is non-nil and enabled.
 // Otherwise b is returned unmodified.
-func (in *indenter) appendByte(b []byte, a byte) []byte {
+func (in *Indenter) appendByte(b []byte, a byte) []byte {
 	if in == nil || in.disabled {
 		return b
 	}
@@ -1164,8 +1169,8 @@ func (in *indenter) appendByte(b []byte, a byte) []byte {
 }
 
 // appendIndent writes indentation to b, returning the resulting slice.
-// If the indenter is nil or disabled b is returned unchanged.
-func (in *indenter) appendIndent(b []byte) []byte {
+// If the Indenter is nil or disabled b is returned unchanged.
+func (in *Indenter) appendIndent(b []byte) []byte {
 	if in == nil || in.disabled {
 		return b
 	}

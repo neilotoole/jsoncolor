@@ -28,8 +28,38 @@ type Colors struct {
 	// Time is the color for datetime values.
 	Time Color
 
-	// Punc is the color for JSON punctuation: []{},: etc.
+	// Punc is the color for JSON punctuation: the structural
+	// characters [ ] { } , and : .
+	//
+	// Punc acts as the fallback color for all punctuation. The more
+	// specific fields below (Brackets, Braces, Comma, Colon) override
+	// Punc for their respective characters; when one of those fields is
+	// the zero value (unset), the encoder falls back to Punc. Therefore
+	// code that sets only Punc continues to colorize all punctuation
+	// exactly as before.
+	//
+	// Note that the structural double-quote characters that delimit JSON
+	// strings and keys are not controlled by Punc; they are colored by
+	// the String and Key fields respectively.
 	Punc Color
+
+	// Brackets is the color for array bracket punctuation: [ and ] .
+	// When unset (the zero value), it falls back to Punc.
+	Brackets Color
+
+	// Braces is the color for object brace punctuation: { and } .
+	// When unset (the zero value), it falls back to Punc.
+	Braces Color
+
+	// Comma is the color for the comma punctuation that separates
+	// array elements and object members: , .
+	// When unset (the zero value), it falls back to Punc.
+	Comma Color
+
+	// Colon is the color for the colon punctuation that separates
+	// object keys from their values: : .
+	// When unset (the zero value), it falls back to Punc.
+	Colon Color
 
 	// TextMarshaler is the color for values implementing encoding.TextMarshaler.
 	TextMarshaler Color
@@ -88,15 +118,42 @@ func (c *Colors) appendUint64(b []byte, v uint64) []byte {
 	return append(b, ansiReset...)
 }
 
-// appendPunc appends the colorized punctuation mark v to b.
+// appendPunc appends the colorized punctuation mark v to b. The color is
+// chosen by puncColor, which selects the granular field corresponding to v
+// (Brackets, Braces, Comma, Colon), falling back to Punc when that field is
+// unset.
 func (c *Colors) appendPunc(b []byte, v byte) []byte {
 	if c == nil {
 		return append(b, v)
 	}
 
-	b = append(b, c.Punc...)
+	b = append(b, c.puncColor(v)...)
 	b = append(b, v)
 	return append(b, ansiReset...)
+}
+
+// puncColor returns the Color to use for punctuation mark v. It selects the
+// granular field that governs v: Brackets for [ and ], Braces for { and },
+// Comma for , and Colon for : . When the selected granular field is the zero
+// value (unset), it falls back to Punc. This preserves backward compatibility
+// for callers that set only Punc.
+func (c *Colors) puncColor(v byte) Color {
+	var clr Color
+	switch v {
+	case '[', ']':
+		clr = c.Brackets
+	case '{', '}':
+		clr = c.Braces
+	case ',':
+		clr = c.Comma
+	case ':':
+		clr = c.Colon
+	}
+
+	if len(clr) == 0 {
+		return c.Punc
+	}
+	return clr
 }
 
 // Color is used to render terminal colors. In effect, Color is
@@ -117,14 +174,18 @@ const ansiReset = "\x1b[0m"
 // with some deviation.
 func DefaultColors() *Colors {
 	return &Colors{
-		Null:          Color("\x1b[2m"),
-		Bool:          Color("\x1b[1m"),
-		Number:        Color("\x1b[36m"),
-		String:        Color("\x1b[32m"),
-		Key:           Color("\x1b[34;1m"),
-		Bytes:         Color("\x1b[2m"),
-		Time:          Color("\x1b[32;2m"),
-		Punc:          Color{},           // No colorization
+		Null:   Color("\x1b[2m"),
+		Bool:   Color("\x1b[1m"),
+		Number: Color("\x1b[36m"),
+		String: Color("\x1b[32m"),
+		Key:    Color("\x1b[34;1m"),
+		Bytes:  Color("\x1b[2m"),
+		Time:   Color("\x1b[32;2m"),
+		Punc:   Color{}, // No colorization
+		// The granular punctuation fields (Brackets, Braces, Comma,
+		// Colon) are intentionally left as the zero value so that they
+		// fall back to Punc, preserving the default (uncolored)
+		// punctuation behavior.
 		TextMarshaler: Color("\x1b[32m"), // Same as String
 	}
 }
