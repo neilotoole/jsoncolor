@@ -8,6 +8,10 @@ on:
     paths-ignore:
       - '**.md'
 
+permissions:
+  # Least privilege: the build only needs read access to check out the repo.
+  contents: read
+
 jobs:
   build:
     strategy:

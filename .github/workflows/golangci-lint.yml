@@ -8,9 +8,11 @@ on:
       - '**.md'
 
 permissions:
+  # Least privilege: golangci-lint only needs to read the repo to check out and lint.
   contents: read
-  # Optional: allow read access to pull request. Use with `only-new-issues` option.
-  pull-requests: read
+  # `pull-requests: read` is required only if enabling the action's `only-new-issues`
+  # option (not used here), so it is intentionally omitted.
+  # pull-requests: read
 
 jobs:
   golangci:
