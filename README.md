@@ -1,6 +1,6 @@
 [![Actions Status](https://github.com/neilotoole/jsoncolor/workflows/Go/badge.svg)](https://github.com/neilotoole/jsoncolor/actions?query=workflow%3AGo)
 [![Go Report Card](https://goreportcard.com/badge/neilotoole/jsoncolor)](https://goreportcard.com/report/neilotoole/jsoncolor)
-[![release](https://img.shields.io/badge/release-v0.7.0-green.svg)](https://github.com/neilotoole/jsoncolor/releases/tag/v0.7.0)
+[![release](https://img.shields.io/badge/release-v0.9.0-green.svg)](https://github.com/neilotoole/jsoncolor/releases/tag/v0.9.0)
 [![Go Reference](https://pkg.go.dev/badge/github.com/neilotoole/jsoncolor.svg)](https://pkg.go.dev/github.com/neilotoole/jsoncolor)
 [![license](https://img.shields.io/github/license/neilotoole/jsoncolor)](./LICENSE)
 
@@ -215,11 +215,14 @@ History: this package is an extract of [`sq`](https://github.com/neilotoole/sq)'
 original `sq` JSON encoder was forked from Segment's codebase at `v0.1.14`, so
 the codebases have drifted significantly by now.
 
-### [v0.8.0](https://github.com/neilotoole/jsoncolor/releases/tag/v0.8.0)
+### [v0.9.0](https://github.com/neilotoole/jsoncolor/releases/tag/v0.9.0)
 
 - [#16](https://github.com/neilotoole/jsoncolor/issues/16): Add individually-configurable punctuation color fields — `Colors.Brackets`, `Colors.Braces`, `Colors.Comma`, and `Colors.Colon` — each falling back to `Colors.Punc` when unset, so existing configs are unaffected.
 - [#19](https://github.com/neilotoole/jsoncolor/issues/19): Fix nondeterministic object key order when encoding `RawMessage`. Values are now re-encoded via on-the-fly tokenization, preserving source key order, instead of round-tripping through a `map`.
 - [#37](https://github.com/neilotoole/jsoncolor/issues/37): Exported the `indenter` type (now `Indenter`) and added the `NewIndenter` constructor, so external callers can construct the indenter argument accepted by `Append`. The `Append` signature now reads `Append(b []byte, x interface{}, flags AppendFlags, clrs *Colors, indentr *Indenter)`.
+
+### [v0.8.0](https://github.com/neilotoole/jsoncolor/releases/tag/v0.8.0)
+
 - Bumped minimum Go version from 1.17 to 1.25.
 - Updated dependencies to latest: `fatih/color` v1.19.0, `mattn/go-colorable` v0.1.14, `golang.org/x/sys` v0.45.0, and `golang.org/x/term` v0.43.0 (plus test-only `stretchr/testify` v1.11.1 and `segmentio/encoding` v0.5.4).
 - Migrated the `golangci-lint` config to the v2 format; CI now runs `golangci-lint` v2.12.2 (action `v8`) and the test matrix targets Go 1.25 and 1.26.
