@@ -203,9 +203,17 @@ Again, trust these benchmarks at your peril. Create your own benchmarks for your
   more recent (and better-linted) version of the `segementio` codebase.
 - The `segmentio` encoder (at least as of `v0.1.14`) encodes `time.Duration` as string, while `stdlib` outputs as `int64`.
   This package follows `stdlib`.
-- The [`Colors.Punc`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Colors) field controls all
-  punctuation colorization, i.e. `[]{},:"`. It is probably worthwhile to [separate](https://github.com/neilotoole/jsoncolor/issues/16)
-  these out into individually-configurable elements.
+- The [`Colors.Punc`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Colors) field is the
+  fallback color for punctuation (`[]{},:`). As of `v0.9.0` the individual classes can also be set
+  via `Colors.Brackets`, `Colors.Braces`, `Colors.Comma`, and `Colors.Colon`, each falling back to
+  `Colors.Punc` when unset. (The structural `"` is colored by `Colors.String`/`Colors.Key`, not
+  `Colors.Punc`.)
+
+## Contributing
+
+Contributions are welcome! See [`CONTRIBUTING.md`](CONTRIBUTING.md) for how to build,
+test, and submit changes, and please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+To report a security vulnerability, see [`SECURITY.md`](SECURITY.md).
 
 <a name="history"></a>
 ## CHANGELOG
@@ -259,3 +267,7 @@ the codebases have drifted significantly by now.
 - [`nwidger/jsoncolor`](https://github.com/nwidger/jsoncolor)
 - [`hokaccha/go-prettyjson`](https://github.com/hokaccha/go-prettyjson)
 - [`TylerBrock/colorjson`](https://github.com/TylerBrock/colorjson)
+
+## License
+
+[MIT](LICENSE) © Neil O'Toole
