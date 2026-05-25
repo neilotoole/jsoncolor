@@ -1,6 +1,6 @@
 [![Actions Status](https://github.com/neilotoole/jsoncolor/workflows/Go/badge.svg)](https://github.com/neilotoole/jsoncolor/actions?query=workflow%3AGo)
 [![Go Report Card](https://goreportcard.com/badge/neilotoole/jsoncolor)](https://goreportcard.com/report/neilotoole/jsoncolor)
-[![release](https://img.shields.io/badge/release-v0.9.0-green.svg)](https://github.com/neilotoole/jsoncolor#changelog)
+[![release](https://img.shields.io/badge/release-v0.9.1-green.svg)](https://github.com/neilotoole/jsoncolor#changelog)
 [![Go Reference](https://pkg.go.dev/badge/github.com/neilotoole/jsoncolor.svg)](https://pkg.go.dev/github.com/neilotoole/jsoncolor)
 [![license](https://img.shields.io/github/license/neilotoole/jsoncolor)](./LICENSE)
 
@@ -222,6 +222,16 @@ History: this package is an extract of [`sq`](https://github.com/neilotoole/sq)'
 [`segmentio/encoding`](https://github.com/segmentio/encoding) JSON encoding package. Note that the
 original `sq` JSON encoder was forked from Segment's codebase at `v0.1.14`, so
 the codebases have drifted significantly by now.
+
+### [v0.9.1](https://github.com/neilotoole/jsoncolor/releases/tag/v0.9.1)
+
+Documentation and repository housekeeping; no functional changes to the library.
+
+- Add a package doc comment so [pkg.go.dev](https://pkg.go.dev/github.com/neilotoole/jsoncolor) shows a package overview.
+- Add `CONTRIBUTING.md`, a Contributor Covenant `CODE_OF_CONDUCT.md`, and GitHub issue and pull request templates.
+- Refresh `SECURITY.md`: update supported versions and switch to private vulnerability reporting.
+- Restrict the CI workflows' `GITHUB_TOKEN` to least-privilege (`contents: read`) permissions.
+- README: add Contributing and License sections, and point the release badge at the changelog.
 
 ### [v0.9.0](https://github.com/neilotoole/jsoncolor/releases/tag/v0.9.0)
 
