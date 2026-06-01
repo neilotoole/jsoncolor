@@ -18,54 +18,96 @@ import (
 const hex = "0123456789abcdef"
 
 func (e encoder) encodeNull(b []byte, _ unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		return append(b, "null"...), nil
+	}
 	return e.clrs.appendNull(b), nil
 }
 
 func (e encoder) encodeBool(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		if *(*bool)(p) {
+			return append(b, "true"...), nil
+		}
+		return append(b, "false"...), nil
+	}
 	return e.clrs.appendBool(b, *(*bool)(p)), nil
 }
 
 func (e encoder) encodeInt(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		return strconv.AppendInt(b, int64(*(*int)(p)), 10), nil
+	}
 	return e.clrs.appendInt64(b, int64(*(*int)(p))), nil
 }
 
 func (e encoder) encodeInt8(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		return strconv.AppendInt(b, int64(*(*int8)(p)), 10), nil
+	}
 	return e.clrs.appendInt64(b, int64(*(*int8)(p))), nil
 }
 
 func (e encoder) encodeInt16(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		return strconv.AppendInt(b, int64(*(*int16)(p)), 10), nil
+	}
 	return e.clrs.appendInt64(b, int64(*(*int16)(p))), nil
 }
 
 func (e encoder) encodeInt32(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		return strconv.AppendInt(b, int64(*(*int32)(p)), 10), nil
+	}
 	return e.clrs.appendInt64(b, int64(*(*int32)(p))), nil
 }
 
 func (e encoder) encodeInt64(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		return strconv.AppendInt(b, *(*int64)(p), 10), nil
+	}
 	return e.clrs.appendInt64(b, *(*int64)(p)), nil
 }
 
 func (e encoder) encodeUint(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		return strconv.AppendUint(b, uint64(*(*uint)(p)), 10), nil
+	}
 	return e.clrs.appendUint64(b, uint64(*(*uint)(p))), nil
 }
 
 func (e encoder) encodeUintptr(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		return strconv.AppendUint(b, uint64(*(*uintptr)(p)), 10), nil
+	}
 	return e.clrs.appendUint64(b, uint64(*(*uintptr)(p))), nil
 }
 
 func (e encoder) encodeUint8(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		return strconv.AppendUint(b, uint64(*(*uint8)(p)), 10), nil
+	}
 	return e.clrs.appendUint64(b, uint64(*(*uint8)(p))), nil
 }
 
 func (e encoder) encodeUint16(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		return strconv.AppendUint(b, uint64(*(*uint16)(p)), 10), nil
+	}
 	return e.clrs.appendUint64(b, uint64(*(*uint16)(p))), nil
 }
 
 func (e encoder) encodeUint32(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		return strconv.AppendUint(b, uint64(*(*uint32)(p)), 10), nil
+	}
 	return e.clrs.appendUint64(b, uint64(*(*uint32)(p))), nil
 }
 
 func (e encoder) encodeUint64(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		return strconv.AppendUint(b, *(*uint64)(p), 10), nil
+	}
 	return e.clrs.appendUint64(b, *(*uint64)(p)), nil
 }
 
@@ -333,6 +375,9 @@ func (e encoder) encodeDuration(b []byte, p unsafe.Pointer) ([]byte, error) {
 	//  The stdlib encoder does not. It just outputs the int64 value.
 	//  We choose to follow the stdlib pattern, for fuller compatibility.
 
+	if e.clrs == nil && !e.forceSlow {
+		return strconv.AppendInt(b, int64(*(*time.Duration)(p)), 10), nil
+	}
 	b = e.clrs.appendInt64(b, int64(*(*time.Duration)(p)))
 	return b, nil
 
@@ -372,6 +417,13 @@ func (e encoder) encodeTime(b []byte, p unsafe.Pointer) ([]byte, error) {
 }
 
 func (e encoder) encodeArray(b []byte, p unsafe.Pointer, n int, size uintptr, _ reflect.Type, encode encodeFunc) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		if e.indentr == nil || e.indentr.disabled {
+			return e.encodeArrayPlain(b, p, n, size, encode)
+		}
+		return e.encodeArrayIndented(b, p, n, size, encode)
+	}
+
 	start := len(b)
 	var err error
 
@@ -401,6 +453,49 @@ func (e encoder) encodeArray(b []byte, p unsafe.Pointer, n int, size uintptr, _ 
 	return b, nil
 }
 
+// encodeArrayPlain is the fast path for encodeArray when no colors and no
+// indenter are configured. The caller must verify both preconditions.
+func (e encoder) encodeArrayPlain(b []byte, p unsafe.Pointer, n int, size uintptr, encode encodeFunc) ([]byte, error) {
+	start := len(b)
+	b = append(b, '[')
+	for i := 0; i < n; i++ {
+		if i != 0 {
+			b = append(b, ',')
+		}
+		var err error
+		if b, err = encode(e, b, unsafe.Pointer(uintptr(p)+(uintptr(i)*size))); err != nil {
+			return b[:start], err
+		}
+	}
+	return append(b, ']'), nil
+}
+
+// encodeArrayIndented is the fast path for encodeArray when no colors are
+// configured but an enabled indenter is. The caller must verify both
+// preconditions.
+func (e encoder) encodeArrayIndented(b []byte, p unsafe.Pointer, n int, size uintptr, encode encodeFunc) ([]byte, error) {
+	start := len(b)
+	b = append(b, '[')
+	if n > 0 {
+		e.indentr.depth++
+		for i := 0; i < n; i++ {
+			if i != 0 {
+				b = append(b, ',')
+			}
+			b = append(b, '\n')
+			b = e.indentr.appendIndentFast(b)
+			var err error
+			if b, err = encode(e, b, unsafe.Pointer(uintptr(p)+(uintptr(i)*size))); err != nil {
+				return b[:start], err
+			}
+		}
+		e.indentr.depth--
+		b = append(b, '\n')
+		b = e.indentr.appendIndentFast(b)
+	}
+	return append(b, ']'), nil
+}
+
 func (e encoder) encodeSlice(b []byte, p unsafe.Pointer, size uintptr, t reflect.Type, encode encodeFunc) ([]byte, error) {
 	s := (*slice)(p)
 
@@ -412,6 +507,13 @@ func (e encoder) encodeSlice(b []byte, p unsafe.Pointer, size uintptr, t reflect
 }
 
 func (e encoder) encodeMap(b []byte, p unsafe.Pointer, t reflect.Type, encodeKey, encodeValue encodeFunc, sortKeys sortFunc) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		if e.indentr == nil || e.indentr.disabled {
+			return e.encodeMapPlain(b, p, t, encodeKey, encodeValue, sortKeys)
+		}
+		return e.encodeMapIndented(b, p, t, encodeKey, encodeValue, sortKeys)
+	}
+
 	m := reflect.NewAt(t, p).Elem()
 	if m.IsNil() {
 		return e.clrs.appendNull(b), nil
@@ -460,6 +562,76 @@ func (e encoder) encodeMap(b []byte, p unsafe.Pointer, t reflect.Type, encodeKey
 	return b, nil
 }
 
+func (e encoder) encodeMapPlain(b []byte, p unsafe.Pointer, t reflect.Type, encodeKey, encodeValue encodeFunc, sortKeys sortFunc) ([]byte, error) {
+	m := reflect.NewAt(t, p).Elem()
+	if m.IsNil() {
+		return append(b, "null"...), nil
+	}
+
+	keys := m.MapKeys()
+	if sortKeys != nil && (e.flags&SortMapKeys) != 0 {
+		sortKeys(keys)
+	}
+
+	start := len(b)
+	b = append(b, '{')
+	for i := range keys {
+		k := keys[i]
+		v := m.MapIndex(k)
+		if i != 0 {
+			b = append(b, ',')
+		}
+		var err error
+		if b, err = encodeKey(e, b, (*iface)(unsafe.Pointer(&k)).ptr); err != nil {
+			return b[:start], err
+		}
+		b = append(b, ':')
+		if b, err = encodeValue(e, b, (*iface)(unsafe.Pointer(&v)).ptr); err != nil {
+			return b[:start], err
+		}
+	}
+	return append(b, '}'), nil
+}
+
+func (e encoder) encodeMapIndented(b []byte, p unsafe.Pointer, t reflect.Type, encodeKey, encodeValue encodeFunc, sortKeys sortFunc) ([]byte, error) {
+	m := reflect.NewAt(t, p).Elem()
+	if m.IsNil() {
+		return append(b, "null"...), nil
+	}
+
+	keys := m.MapKeys()
+	if sortKeys != nil && (e.flags&SortMapKeys) != 0 {
+		sortKeys(keys)
+	}
+
+	start := len(b)
+	b = append(b, '{')
+	if len(keys) != 0 {
+		b = append(b, '\n')
+		e.indentr.depth++
+		for i := range keys {
+			k := keys[i]
+			v := m.MapIndex(k)
+			if i != 0 {
+				b = append(b, ',', '\n')
+			}
+			b = e.indentr.appendIndentFast(b)
+			var err error
+			if b, err = encodeKey(e, b, (*iface)(unsafe.Pointer(&k)).ptr); err != nil {
+				return b[:start], err
+			}
+			b = append(b, ':', ' ')
+			if b, err = encodeValue(e, b, (*iface)(unsafe.Pointer(&v)).ptr); err != nil {
+				return b[:start], err
+			}
+		}
+		b = append(b, '\n')
+		e.indentr.depth--
+		b = e.indentr.appendIndentFast(b)
+	}
+	return append(b, '}'), nil
+}
+
 type element struct {
 	key string
 	val interface{}
@@ -479,6 +651,13 @@ var mapslicePool = sync.Pool{
 }
 
 func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		if e.indentr == nil || e.indentr.disabled {
+			return e.encodeMapStringInterfacePlain(b, p)
+		}
+		return e.encodeMapStringInterfaceIndented(b, p)
+	}
+
 	m := *(*map[string]interface{})(p)
 	if m == nil {
 		return e.clrs.appendNull(b), nil
@@ -512,7 +691,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 				b = e.clrs.appendPunc(b, ':')
 				b = e.indentr.appendByte(b, ' ')
 
-				b, err = Append(b, v, e.flags, e.clrs, e.indentr)
+				b, err = appendInternal(b, v, e.flags, e.clrs, e.indentr, e.forceSlow)
 				if err != nil {
 					return b, err
 				}
@@ -558,7 +737,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 			b = e.clrs.appendPunc(b, ':')
 			b = e.indentr.appendByte(b, ' ')
 
-			b, err = Append(b, elem.val, e.flags, e.clrs, e.indentr)
+			b, err = appendInternal(b, elem.val, e.flags, e.clrs, e.indentr, e.forceSlow)
 			if err != nil {
 				break
 			}
@@ -583,7 +762,154 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 	return b, nil
 }
 
+func (e encoder) encodeMapStringInterfacePlain(b []byte, p unsafe.Pointer) ([]byte, error) {
+	m := *(*map[string]interface{})(p)
+	if m == nil {
+		return append(b, "null"...), nil
+	}
+
+	if (e.flags & SortMapKeys) == 0 {
+		b = append(b, '{')
+		i := 0
+		for k, v := range m {
+			if i != 0 {
+				b = append(b, ',')
+			}
+			var err error
+			if b, err = e.encodeKey(b, unsafe.Pointer(&k)); err != nil {
+				return b, err
+			}
+			b = append(b, ':')
+			if b, err = appendInternal(b, v, e.flags, nil, e.indentr, false); err != nil {
+				return b, err
+			}
+			i++
+		}
+		return append(b, '}'), nil
+	}
+
+	s := mapslicePool.Get().(*mapslice) //nolint:errcheck
+	if cap(s.elements) < len(m) {
+		s.elements = make([]element, 0, align(10, uintptr(len(m))))
+	}
+	for key, val := range m {
+		s.elements = append(s.elements, element{key: key, val: val})
+	}
+	sort.Sort(s)
+
+	start := len(b)
+	var err error
+	b = append(b, '{')
+	for i := range s.elements {
+		elem := s.elements[i]
+		if i != 0 {
+			b = append(b, ',')
+		}
+		b, _ = e.encodeKey(b, unsafe.Pointer(&elem.key))
+		b = append(b, ':')
+		if b, err = appendInternal(b, elem.val, e.flags, nil, e.indentr, false); err != nil {
+			break
+		}
+	}
+
+	for i := range s.elements {
+		s.elements[i] = element{}
+	}
+	s.elements = s.elements[:0]
+	mapslicePool.Put(s)
+
+	if err != nil {
+		return b[:start], err
+	}
+	return append(b, '}'), nil
+}
+
+func (e encoder) encodeMapStringInterfaceIndented(b []byte, p unsafe.Pointer) ([]byte, error) {
+	m := *(*map[string]interface{})(p)
+	if m == nil {
+		return append(b, "null"...), nil
+	}
+
+	if (e.flags & SortMapKeys) == 0 {
+		b = append(b, '{')
+		if len(m) != 0 {
+			b = append(b, '\n')
+			e.indentr.depth++
+			i := 0
+			for k, v := range m {
+				if i != 0 {
+					b = append(b, ',', '\n')
+				}
+				b = e.indentr.appendIndentFast(b)
+				var err error
+				if b, err = e.encodeKey(b, unsafe.Pointer(&k)); err != nil {
+					return b, err
+				}
+				b = append(b, ':', ' ')
+				if b, err = appendInternal(b, v, e.flags, nil, e.indentr, false); err != nil {
+					return b, err
+				}
+				i++
+			}
+			b = append(b, '\n')
+			e.indentr.depth--
+			b = e.indentr.appendIndentFast(b)
+		}
+		return append(b, '}'), nil
+	}
+
+	s := mapslicePool.Get().(*mapslice) //nolint:errcheck
+	if cap(s.elements) < len(m) {
+		s.elements = make([]element, 0, align(10, uintptr(len(m))))
+	}
+	for key, val := range m {
+		s.elements = append(s.elements, element{key: key, val: val})
+	}
+	sort.Sort(s)
+
+	start := len(b)
+	var err error
+	b = append(b, '{')
+	if len(s.elements) > 0 {
+		b = append(b, '\n')
+		e.indentr.depth++
+		for i := range s.elements {
+			elem := s.elements[i]
+			if i != 0 {
+				b = append(b, ',', '\n')
+			}
+			b = e.indentr.appendIndentFast(b)
+			b, _ = e.encodeKey(b, unsafe.Pointer(&elem.key))
+			b = append(b, ':', ' ')
+			if b, err = appendInternal(b, elem.val, e.flags, nil, e.indentr, false); err != nil {
+				break
+			}
+		}
+		b = append(b, '\n')
+		e.indentr.depth--
+		b = e.indentr.appendIndentFast(b)
+	}
+
+	for i := range s.elements {
+		s.elements[i] = element{}
+	}
+	s.elements = s.elements[:0]
+	mapslicePool.Put(s)
+
+	if err != nil {
+		return b[:start], err
+	}
+	return append(b, '}'), nil
+}
+
 func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		if e.indentr == nil || e.indentr.disabled {
+			return e.encodeMapStringRawMessagePlain(b, p)
+		}
+		return e.encodeMapStringRawMessageIndented(b, p)
+	}
+
 	m := *(*map[string]RawMessage)(p)
 	if m == nil {
 		return e.clrs.appendNull(b), nil
@@ -691,7 +1017,156 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 	return b, nil
 }
 
+func (e encoder) encodeMapStringRawMessagePlain(b []byte, p unsafe.Pointer) ([]byte, error) {
+	m := *(*map[string]RawMessage)(p)
+	if m == nil {
+		return append(b, "null"...), nil
+	}
+
+	if (e.flags & SortMapKeys) == 0 {
+		b = append(b, '{')
+		i := 0
+		for k := range m {
+			if i != 0 {
+				b = append(b, ',')
+			}
+			var err error
+			if b, err = e.encodeKey(b, unsafe.Pointer(&k)); err != nil {
+				return b, err
+			}
+			b = append(b, ':')
+			v := m[k]
+			if b, err = e.encodeRawMessage(b, unsafe.Pointer(&v)); err != nil {
+				return b, err
+			}
+			i++
+		}
+		return append(b, '}'), nil
+	}
+
+	s := mapslicePool.Get().(*mapslice) //nolint:errcheck
+	if cap(s.elements) < len(m) {
+		s.elements = make([]element, 0, align(10, uintptr(len(m))))
+	}
+	for key, raw := range m {
+		s.elements = append(s.elements, element{key: key, raw: raw})
+	}
+	sort.Sort(s)
+
+	start := len(b)
+	var err error
+	b = append(b, '{')
+	for i := range s.elements {
+		elem := s.elements[i]
+		if i != 0 {
+			b = append(b, ',')
+		}
+		b, _ = e.encodeKey(b, unsafe.Pointer(&elem.key))
+		b = append(b, ':')
+		if b, err = e.encodeRawMessage(b, unsafe.Pointer(&elem.raw)); err != nil {
+			break
+		}
+	}
+
+	for i := range s.elements {
+		s.elements[i] = element{}
+	}
+	s.elements = s.elements[:0]
+	mapslicePool.Put(s)
+
+	if err != nil {
+		return b[:start], err
+	}
+	return append(b, '}'), nil
+}
+
+func (e encoder) encodeMapStringRawMessageIndented(b []byte, p unsafe.Pointer) ([]byte, error) {
+	m := *(*map[string]RawMessage)(p)
+	if m == nil {
+		return append(b, "null"...), nil
+	}
+
+	if (e.flags & SortMapKeys) == 0 {
+		b = append(b, '{')
+		if len(m) != 0 {
+			b = append(b, '\n')
+			e.indentr.depth++
+			i := 0
+			for k := range m {
+				if i != 0 {
+					b = append(b, ',', '\n')
+				}
+				b = e.indentr.appendIndentFast(b)
+				var err error
+				if b, err = e.encodeKey(b, unsafe.Pointer(&k)); err != nil {
+					return b, err
+				}
+				b = append(b, ':', ' ')
+				v := m[k]
+				if b, err = e.encodeRawMessage(b, unsafe.Pointer(&v)); err != nil {
+					return b, err
+				}
+				i++
+			}
+			b = append(b, '\n')
+			e.indentr.depth--
+			b = e.indentr.appendIndentFast(b)
+		}
+		return append(b, '}'), nil
+	}
+
+	s := mapslicePool.Get().(*mapslice) //nolint:errcheck
+	if cap(s.elements) < len(m) {
+		s.elements = make([]element, 0, align(10, uintptr(len(m))))
+	}
+	for key, raw := range m {
+		s.elements = append(s.elements, element{key: key, raw: raw})
+	}
+	sort.Sort(s)
+
+	start := len(b)
+	var err error
+	b = append(b, '{')
+	if len(s.elements) > 0 {
+		b = append(b, '\n')
+		e.indentr.depth++
+		for i := range s.elements {
+			elem := s.elements[i]
+			if i != 0 {
+				b = append(b, ',', '\n')
+			}
+			b = e.indentr.appendIndentFast(b)
+			b, _ = e.encodeKey(b, unsafe.Pointer(&elem.key))
+			b = append(b, ':', ' ')
+			if b, err = e.encodeRawMessage(b, unsafe.Pointer(&elem.raw)); err != nil {
+				break
+			}
+		}
+		b = append(b, '\n')
+		e.indentr.depth--
+		b = e.indentr.appendIndentFast(b)
+	}
+
+	for i := range s.elements {
+		s.elements[i] = element{}
+	}
+	s.elements = s.elements[:0]
+	mapslicePool.Put(s)
+
+	if err != nil {
+		return b[:start], err
+	}
+	return append(b, '}'), nil
+}
+
 func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byte, error) {
+	if e.clrs == nil && !e.forceSlow {
+		if e.indentr == nil || e.indentr.disabled {
+			return e.encodeStructPlain(b, p, st)
+		}
+		return e.encodeStructIndented(b, p, st)
+	}
+
 	var err error
 	var k string
 	var n int
@@ -762,6 +1237,108 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 	return b, nil
 }
 
+func (e encoder) encodeStructPlain(b []byte, p unsafe.Pointer, st *structType) ([]byte, error) {
+	var k string
+	var n int
+	start := len(b)
+
+	b = append(b, '{')
+
+	for i := range st.fields {
+		f := &st.fields[i]
+		v := unsafe.Pointer(uintptr(p) + f.offset)
+
+		if f.omitempty && f.empty(v) {
+			continue
+		}
+
+		if n != 0 {
+			b = append(b, ',')
+		}
+
+		if (e.flags & EscapeHTML) != 0 {
+			k = f.html
+		} else {
+			k = f.json
+		}
+
+		lengthBeforeKey := len(b)
+		b = append(b, k...)
+		b = append(b, ':')
+
+		var err error
+		if b, err = f.codec.encode(e, b, v); err != nil {
+			if errors.Is(err, rollback{}) {
+				b = b[:lengthBeforeKey]
+				continue
+			}
+			return b[:start], err
+		}
+
+		n++
+	}
+
+	return append(b, '}'), nil
+}
+
+func (e encoder) encodeStructIndented(b []byte, p unsafe.Pointer, st *structType) ([]byte, error) {
+	var k string
+	var n int
+	start := len(b)
+
+	b = append(b, '{')
+
+	if len(st.fields) > 0 {
+		b = append(b, '\n')
+	}
+
+	e.indentr.depth++
+
+	for i := range st.fields {
+		f := &st.fields[i]
+		v := unsafe.Pointer(uintptr(p) + f.offset)
+
+		if f.omitempty && f.empty(v) {
+			continue
+		}
+
+		if n != 0 {
+			b = append(b, ',', '\n')
+		}
+
+		if (e.flags & EscapeHTML) != 0 {
+			k = f.html
+		} else {
+			k = f.json
+		}
+
+		lengthBeforeKey := len(b)
+		b = e.indentr.appendIndentFast(b)
+		b = append(b, k...)
+		b = append(b, ':', ' ')
+
+		var err error
+		if b, err = f.codec.encode(e, b, v); err != nil {
+			if errors.Is(err, rollback{}) {
+				b = b[:lengthBeforeKey]
+				continue
+			}
+			return b[:start], err
+		}
+
+		n++
+	}
+
+	if n > 0 {
+		b = append(b, '\n')
+	}
+
+	e.indentr.depth--
+	b = e.indentr.appendIndentFast(b)
+
+	return append(b, '}'), nil
+}
+
 type rollback struct{}
 
 func (rollback) Error() string { return "rollback" }
@@ -782,11 +1359,11 @@ func (e encoder) encodePointer(b []byte, p unsafe.Pointer, _ reflect.Type, encod
 }
 
 func (e encoder) encodeInterface(b []byte, p unsafe.Pointer) ([]byte, error) {
-	return Append(b, *(*interface{})(p), e.flags, e.clrs, e.indentr)
+	return appendInternal(b, *(*interface{})(p), e.flags, e.clrs, e.indentr, e.forceSlow)
 }
 
 func (e encoder) encodeMaybeEmptyInterface(b []byte, p unsafe.Pointer, t reflect.Type) ([]byte, error) {
-	return Append(b, reflect.NewAt(t, p).Elem().Interface(), e.flags, e.clrs, e.indentr)
+	return appendInternal(b, reflect.NewAt(t, p).Elem().Interface(), e.flags, e.clrs, e.indentr, e.forceSlow)
 }
 
 func (e encoder) encodeUnsupportedTypeError(b []byte, _ unsafe.Pointer, t reflect.Type) ([]byte, error) {
@@ -1026,7 +1603,7 @@ func (e encoder) encodeJSONMarshaler(b []byte, p unsafe.Pointer, t reflect.Type,
 	}
 
 	// We effectively delegate to the encodeRawMessage method.
-	return Append(b, RawMessage(j), e.flags, e.clrs, e.indentr)
+	return appendInternal(b, RawMessage(j), e.flags, e.clrs, e.indentr, e.forceSlow)
 }
 
 func (e encoder) encodeTextMarshaler(b []byte, p unsafe.Pointer, t reflect.Type, pointer bool) ([]byte, error) {
@@ -1180,6 +1757,14 @@ func (in *Indenter) appendIndent(b []byte) []byte {
 		return b
 	}
 
+	return in.appendIndentFast(b)
+}
+
+// appendIndentFast writes indentation to b assuming the receiver is
+// non-nil and not disabled. Callers must verify those preconditions; the
+// colorless fast paths do so once per container, then call this directly
+// to skip the per-token nil/disabled check.
+func (in *Indenter) appendIndentFast(b []byte) []byte {
 	b = append(b, in.prefix...)
 	for i := 0; i < in.depth; i++ {
 		b = append(b, in.indent...)
