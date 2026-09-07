@@ -97,6 +97,11 @@ func DefaultColors() *Colors {
     Bytes:  Color("\x1b[2m"),
     Time:   Color("\x1b[32;2m"),
     Punc:   Color{}, // No colorization
+    // The granular punctuation fields (Brackets, Braces, Comma,
+    // Colon) are intentionally left as the zero value so that they
+    // fall back to Punc, preserving the default (uncolored)
+    // punctuation behavior.
+    TextMarshaler: Color("\x1b[32m"), // Same as String
   }
 }
 ```

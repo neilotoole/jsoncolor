@@ -594,6 +594,50 @@ func TestEncode_TextMarshaler(t *testing.T) {
 		"expected TextMarshaler encoding to use Colors.TextMarshaler")
 }
 
+// TestEncode_TextMarshaler_FallbackToString verifies that when
+// Colors.TextMarshaler is unset (the zero value), values implementing
+// encoding.TextMarshaler are colored with Colors.String, and that an
+// explicitly set Colors.TextMarshaler takes precedence over Colors.String.
+// See issue #53.
+func TestEncode_TextMarshaler_FallbackToString(t *testing.T) {
+	const (
+		str   = "\x1b[32m" // green (String)
+		tmClr = "\x1b[36m" // cyan (TextMarshaler)
+		reset = "\x1b[0m"
+	)
+
+	testCases := []struct {
+		name string
+		clrs *jsoncolor.Colors
+		want string
+	}{
+		{
+			name: "unset TextMarshaler falls back to String",
+			clrs: &jsoncolor.Colors{String: jsoncolor.Color(str)},
+			want: str + `"example text"` + reset + "\n",
+		},
+		{
+			name: "explicit TextMarshaler overrides String",
+			clrs: &jsoncolor.Colors{
+				String:        jsoncolor.Color(str),
+				TextMarshaler: jsoncolor.Color(tmClr),
+			},
+			want: tmClr + `"example text"` + reset + "\n",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			enc := jsoncolor.NewEncoder(buf)
+			enc.SetColors(tc.clrs)
+
+			require.NoError(t, enc.Encode(TextMarshaler{Text: "example text"}))
+			require.Equal(t, tc.want, buf.String())
+		})
+	}
+}
+
 // puncEncode encodes v with the given Colors and returns the output, using
 // no-HTML-escaping and sorted map keys so output is deterministic.
 func puncEncode(t *testing.T, clrs *jsoncolor.Colors, v interface{}) string {

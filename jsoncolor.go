@@ -62,6 +62,7 @@ type Colors struct {
 	Colon Color
 
 	// TextMarshaler is the color for values implementing encoding.TextMarshaler.
+	// When unset (the zero value), it falls back to String.
 	TextMarshaler Color
 }
 
@@ -154,6 +155,17 @@ func (c *Colors) puncColor(v byte) Color {
 		return c.Punc
 	}
 	return clr
+}
+
+// textMarshalerColor returns the Color to use for values implementing
+// encoding.TextMarshaler. When TextMarshaler is the zero value (unset), it
+// falls back to String. This preserves backward compatibility for callers
+// written before TextMarshaler was added to Colors.
+func (c *Colors) textMarshalerColor() Color {
+	if len(c.TextMarshaler) == 0 {
+		return c.String
+	}
+	return c.TextMarshaler
 }
 
 // Color is used to render terminal colors. In effect, Color is
