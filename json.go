@@ -136,7 +136,21 @@ func Append(b []byte, x interface{}, flags AppendFlags, clrs *Colors, indentr *I
 		c = constructCachedCodec(t, cache)
 	}
 
+	// A failed encode can return from inside a push/pop pair, leaving the
+	// Indenter at a stale depth. Restore the depth this call started at on
+	// error, so a failure cannot poison later calls: Encoder.Encode reuses
+	// its Indenter, and Append re-enters itself for interface, Marshaler and
+	// sorted-map values, so the depth must be restored rather than zeroed.
+	// See issue #58.
+	var depth int
+	if indentr != nil {
+		depth = indentr.depth
+	}
+
 	b, err := c.encode(encoder{flags: flags, clrs: clrs, indentr: indentr}, b, p)
+	if err != nil && indentr != nil {
+		indentr.depth = depth
+	}
 	runtime.KeepAlive(x)
 	return b, err
 }
