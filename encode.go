@@ -695,10 +695,6 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 
 	b = e.clrs.appendPunc(b, '{')
 
-	if len(st.fields) > 0 {
-		b = e.indentr.appendByte(b, '\n')
-	}
-
 	e.indentr.push()
 
 	for i := range st.fields {
@@ -709,15 +705,16 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 			continue
 		}
 
-		// Capture the rollback point before the separator so that a
-		// rolled-back field (e.g. a nil embedded struct pointer) does not
-		// leave a dangling comma behind. See issue #56.
-		lengthBeforeKey := len(b)
+		// fieldStart is the rollback point: everything appended for this
+		// field, including its separator, is discarded if the field's codec
+		// returns rollback (e.g. a nil embedded struct pointer). See #56.
+		fieldStart := len(b)
 
 		if n != 0 {
 			b = e.clrs.appendPunc(b, ',')
-			b = e.indentr.appendByte(b, '\n')
 		}
+
+		b = e.indentr.appendByte(b, '\n')
 
 		if (e.flags & EscapeHTML) != 0 {
 			k = f.html
@@ -741,7 +738,7 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 
 		if b, err = f.codec.encode(e, b, v); err != nil {
 			if errors.Is(err, rollback{}) {
-				b = b[:lengthBeforeKey]
+				b = b[:fieldStart]
 				continue
 			}
 			return b[:start], err
@@ -750,12 +747,12 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 		n++
 	}
 
+	e.indentr.pop()
+
 	if n > 0 {
 		b = e.indentr.appendByte(b, '\n')
+		b = e.indentr.appendIndent(b)
 	}
-
-	e.indentr.pop()
-	b = e.indentr.appendIndent(b)
 
 	b = e.clrs.appendPunc(b, '}')
 	return b, nil

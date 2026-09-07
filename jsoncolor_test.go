@@ -745,6 +745,10 @@ type nilEmbedInner struct {
 	X int
 }
 
+type nilEmbedOnly struct {
+	*nilEmbedInner
+}
+
 type nilEmbedFirst struct {
 	*nilEmbedInner
 	A int
@@ -767,47 +771,50 @@ type nilEmbedLast struct {
 var ansiRe = regexp.MustCompile("\x1b\\[[0-9;]*m")
 
 // TestEncode_NilEmbeddedStructPointer verifies that a nil embedded struct
-// pointer does not leave a dangling separator behind when its promoted field
-// is rolled back, regardless of position, colorization or indentation.
+// pointer does not leave a dangling separator or newline behind when its
+// promoted field is rolled back, regardless of position, colorization or
+// indentation. Output (with ANSI stripped) must match encoding/json exactly.
 // See issue #56.
 func TestEncode_NilEmbeddedStructPointer(t *testing.T) {
 	values := []interface{}{
+		nilEmbedOnly{},
 		nilEmbedFirst{A: 1, C: 2},
 		nilEmbedMiddle{A: 1, C: 2},
 		nilEmbedLast{A: 1, C: 2},
 	}
 
-	palettes := map[string]*jsoncolor.Colors{
-		"nocolor": nil,
-		"color":   jsoncolor.DefaultColors(),
+	palettes := []struct {
+		name string
+		clrs *jsoncolor.Colors
+	}{
+		{name: "nocolor", clrs: nil},
+		{name: "color", clrs: jsoncolor.DefaultColors()},
 	}
 
 	for _, v := range values {
-		for palName, clrs := range palettes {
+		for _, pal := range palettes {
 			for _, indent := range []bool{false, true} {
-				name := fmt.Sprintf("%T/%s/indent=%v", v, palName, indent)
+				name := fmt.Sprintf("%T/%s/indent=%v", v, pal.name, indent)
 				t.Run(name, func(t *testing.T) {
-					want, err := stdjson.Marshal(v)
+					var want []byte
+					var err error
+					if indent {
+						want, err = stdjson.MarshalIndent(v, "", "  ")
+					} else {
+						want, err = stdjson.Marshal(v)
+					}
 					require.NoError(t, err)
 
 					buf := &bytes.Buffer{}
 					enc := jsoncolor.NewEncoder(buf)
-					enc.SetColors(clrs)
+					enc.SetColors(pal.clrs)
 					if indent {
 						enc.SetIndent("", "  ")
 					}
 					require.NoError(t, enc.Encode(v))
 
 					got := ansiRe.ReplaceAll(buf.Bytes(), nil)
-					require.True(t, stdjson.Valid(got), "invalid JSON: %q", got)
-
-					compact := &bytes.Buffer{}
-					require.NoError(t, stdjson.Compact(compact, got))
-					require.Equal(t, string(want), compact.String())
-
-					if clrs == nil && !indent {
-						require.Equal(t, string(want)+"\n", buf.String())
-					}
+					require.Equal(t, string(want)+"\n", string(got))
 				})
 			}
 		}
