@@ -1252,6 +1252,9 @@ func (e encoder) encodeStructPlain(b []byte, p unsafe.Pointer, st *structType) (
 			continue
 		}
 
+		// fieldStart is the rollback point; see encodeStruct.
+		fieldStart := len(b)
+
 		if n != 0 {
 			b = append(b, ',')
 		}
@@ -1262,14 +1265,13 @@ func (e encoder) encodeStructPlain(b []byte, p unsafe.Pointer, st *structType) (
 			k = f.json
 		}
 
-		lengthBeforeKey := len(b)
 		b = append(b, k...)
 		b = append(b, ':')
 
 		var err error
 		if b, err = f.codec.encode(e, b, v); err != nil {
 			if errors.Is(err, rollback{}) {
-				b = b[:lengthBeforeKey]
+				b = b[:fieldStart]
 				continue
 			}
 			return b[:start], err
@@ -1288,10 +1290,6 @@ func (e encoder) encodeStructIndented(b []byte, p unsafe.Pointer, st *structType
 
 	b = append(b, '{')
 
-	if len(st.fields) > 0 {
-		b = append(b, '\n')
-	}
-
 	e.indentr.depth++
 
 	for i := range st.fields {
@@ -1302,9 +1300,14 @@ func (e encoder) encodeStructIndented(b []byte, p unsafe.Pointer, st *structType
 			continue
 		}
 
+		// fieldStart is the rollback point; see encodeStruct.
+		fieldStart := len(b)
+
 		if n != 0 {
-			b = append(b, ',', '\n')
+			b = append(b, ',')
 		}
+
+		b = append(b, '\n')
 
 		if (e.flags & EscapeHTML) != 0 {
 			k = f.html
@@ -1312,7 +1315,6 @@ func (e encoder) encodeStructIndented(b []byte, p unsafe.Pointer, st *structType
 			k = f.json
 		}
 
-		lengthBeforeKey := len(b)
 		b = e.indentr.appendIndentFast(b)
 		b = append(b, k...)
 		b = append(b, ':', ' ')
@@ -1320,7 +1322,7 @@ func (e encoder) encodeStructIndented(b []byte, p unsafe.Pointer, st *structType
 		var err error
 		if b, err = f.codec.encode(e, b, v); err != nil {
 			if errors.Is(err, rollback{}) {
-				b = b[:lengthBeforeKey]
+				b = b[:fieldStart]
 				continue
 			}
 			return b[:start], err
@@ -1329,12 +1331,12 @@ func (e encoder) encodeStructIndented(b []byte, p unsafe.Pointer, st *structType
 		n++
 	}
 
+	e.indentr.depth--
+
 	if n > 0 {
 		b = append(b, '\n')
+		b = e.indentr.appendIndentFast(b)
 	}
-
-	e.indentr.depth--
-	b = e.indentr.appendIndentFast(b)
 
 	return append(b, '}'), nil
 }
