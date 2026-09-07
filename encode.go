@@ -709,6 +709,11 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 			continue
 		}
 
+		// Capture the rollback point before the separator so that a
+		// rolled-back field (e.g. a nil embedded struct pointer) does not
+		// leave a dangling comma behind. See issue #56.
+		lengthBeforeKey := len(b)
+
 		if n != 0 {
 			b = e.clrs.appendPunc(b, ',')
 			b = e.indentr.appendByte(b, '\n')
@@ -720,7 +725,6 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 			k = f.json
 		}
 
-		lengthBeforeKey := len(b)
 		b = e.indentr.appendIndent(b)
 
 		if e.clrs == nil {
