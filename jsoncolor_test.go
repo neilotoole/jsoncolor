@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"regexp"
 	"testing"
 
 	"github.com/segmentio/encoding/json"
@@ -780,4 +781,86 @@ func TestAppendIndenter(t *testing.T) {
 	b, err = jsoncolor.Append(nil, m, jsoncolor.EscapeHTML|jsoncolor.SortMapKeys, nil, disabled)
 	require.NoError(t, err)
 	require.Equal(t, `{"a":1}`, string(b))
+}
+
+// nilEmbedInner is embedded by pointer in the structs below. When the pointer
+// is nil, the encoder must roll back the promoted field cleanly.
+type nilEmbedInner struct {
+	X int
+}
+
+type nilEmbedOnly struct {
+	*nilEmbedInner
+}
+
+type nilEmbedFirst struct {
+	*nilEmbedInner
+	A int
+	C int
+}
+
+type nilEmbedMiddle struct {
+	A int
+	*nilEmbedInner
+	C int
+}
+
+type nilEmbedLast struct {
+	A int
+	C int
+	*nilEmbedInner
+}
+
+// ansiRe matches ANSI SGR escape sequences.
+var ansiRe = regexp.MustCompile("\x1b\\[[0-9;]*m")
+
+// TestEncode_NilEmbeddedStructPointer verifies that a nil embedded struct
+// pointer does not leave a dangling separator or newline behind when its
+// promoted field is rolled back, regardless of position, colorization or
+// indentation. Output (with ANSI stripped) must match encoding/json exactly.
+// See issue #56.
+func TestEncode_NilEmbeddedStructPointer(t *testing.T) {
+	values := []interface{}{
+		nilEmbedOnly{},
+		nilEmbedFirst{A: 1, C: 2},
+		nilEmbedMiddle{A: 1, C: 2},
+		nilEmbedLast{A: 1, C: 2},
+	}
+
+	palettes := []struct {
+		name string
+		clrs *jsoncolor.Colors
+	}{
+		{name: "nocolor", clrs: nil},
+		{name: "color", clrs: jsoncolor.DefaultColors()},
+	}
+
+	for _, v := range values {
+		for _, pal := range palettes {
+			for _, indent := range []bool{false, true} {
+				name := fmt.Sprintf("%T/%s/indent=%v", v, pal.name, indent)
+				t.Run(name, func(t *testing.T) {
+					var want []byte
+					var err error
+					if indent {
+						want, err = stdjson.MarshalIndent(v, "", "  ")
+					} else {
+						want, err = stdjson.Marshal(v)
+					}
+					require.NoError(t, err)
+
+					buf := &bytes.Buffer{}
+					enc := jsoncolor.NewEncoder(buf)
+					enc.SetColors(pal.clrs)
+					if indent {
+						enc.SetIndent("", "  ")
+					}
+					require.NoError(t, enc.Encode(v))
+
+					got := ansiRe.ReplaceAll(buf.Bytes(), nil)
+					require.Equal(t, string(want)+"\n", string(got))
+				})
+			}
+		}
+	}
 }
