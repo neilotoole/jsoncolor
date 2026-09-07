@@ -864,3 +864,72 @@ func TestEncode_NilEmbeddedStructPointer(t *testing.T) {
 		}
 	}
 }
+
+// The types below exercise omitempty on fields promoted through an embedded
+// struct pointer. See issue #59.
+
+type omitEmbedInner struct {
+	X int    `json:",omitempty"`
+	Y string `json:",omitempty"`
+}
+
+type omitEmbedMiddle struct {
+	A int
+	*omitEmbedInner
+	C int
+}
+
+type omitEmbedSliceInner struct {
+	S []int `json:",omitempty"`
+}
+
+// omitEmbedSliceLast places the embedded pointer as the last field, so an
+// emptiness check that reads the pointer word as a slice header would read
+// past the end of the struct.
+type omitEmbedSliceLast struct {
+	A int
+	*omitEmbedSliceInner
+}
+
+type omitEmbedL2 struct {
+	Z int `json:",omitempty"`
+}
+
+type omitEmbedL1 struct {
+	*omitEmbedL2
+}
+
+// omitEmbedChain promotes Z through two levels of embedded pointers.
+type omitEmbedChain struct {
+	A int
+	*omitEmbedL1
+	C int
+}
+
+// TestEncode_OmitEmptyThroughEmbeddedPointer verifies that omitempty on a
+// field promoted through one or more embedded struct pointers is evaluated
+// against the promoted field itself, not against the pointer word in the
+// outer struct, and that output matches encoding/json exactly.
+func TestEncode_OmitEmptyThroughEmbeddedPointer(t *testing.T) {
+	values := []interface{}{
+		omitEmbedMiddle{A: 1, omitEmbedInner: &omitEmbedInner{}, C: 2},
+		omitEmbedMiddle{A: 1, omitEmbedInner: &omitEmbedInner{X: 5, Y: "y"}, C: 2},
+		omitEmbedMiddle{A: 1, C: 2},
+		omitEmbedSliceLast{A: 1, omitEmbedSliceInner: &omitEmbedSliceInner{}},
+		omitEmbedSliceLast{A: 1, omitEmbedSliceInner: &omitEmbedSliceInner{S: []int{7}}},
+		omitEmbedChain{A: 1, omitEmbedL1: &omitEmbedL1{omitEmbedL2: &omitEmbedL2{}}, C: 2},
+		omitEmbedChain{A: 1, omitEmbedL1: &omitEmbedL1{omitEmbedL2: &omitEmbedL2{Z: 9}}, C: 2},
+		omitEmbedChain{A: 1, omitEmbedL1: &omitEmbedL1{}, C: 2},
+	}
+
+	for i, v := range values {
+		t.Run(fmt.Sprintf("%d_%T", i, v), func(t *testing.T) {
+			want, err := stdjson.Marshal(v)
+			require.NoError(t, err)
+
+			got, err := jsoncolor.Marshal(v)
+			require.NoError(t, err)
+			require.Equal(t, string(want), string(got))
+		})
+	}
+}

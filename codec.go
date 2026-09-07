@@ -489,6 +489,23 @@ func constructEmbeddedStructPointerCodec(t reflect.Type, unexported bool, offset
 	}
 }
 
+// constructEmbeddedStructPointerEmptyFunc wraps the emptiness check of a
+// field promoted through an embedded struct pointer. Like the codec wrapper
+// above, the returned function receives the address of the pointer word in
+// the outer struct: it dereferences the pointer and applies empty at the
+// field's offset within the embedded struct. A nil pointer is reported as
+// empty. Nested pointer embeds compose naturally, because each level wraps
+// the function produced by the level below. See issue #59.
+func constructEmbeddedStructPointerEmptyFunc(offset uintptr, empty emptyFunc) emptyFunc {
+	return func(p unsafe.Pointer) bool {
+		p = *(*unsafe.Pointer)(p)
+		if p == nil {
+			return true
+		}
+		return empty(unsafe.Pointer(uintptr(p) + offset))
+	}
+}
+
 func constructEmbeddedStructPointerEncodeFunc(t reflect.Type, unexported bool, offset uintptr, encode encodeFunc) encodeFunc {
 	return func(e encoder, b []byte, p unsafe.Pointer) ([]byte, error) {
 		return e.encodeEmbeddedStructPointer(b, p, t, unexported, offset, encode)
@@ -620,6 +637,7 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 
 		if embfield.pointer {
 			subfield.codec = constructEmbeddedStructPointerCodec(embfield.subtype.typ, embfield.unexported, subfield.offset, subfield.codec)
+			subfield.empty = constructEmbeddedStructPointerEmptyFunc(subfield.offset, subfield.empty)
 			subfield.offset = embfield.offset
 		} else {
 			subfield.offset += embfield.offset
