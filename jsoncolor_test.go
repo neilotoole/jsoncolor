@@ -933,3 +933,60 @@ func TestEncode_OmitEmptyThroughEmbeddedPointer(t *testing.T) {
 		})
 	}
 }
+
+// indentLeakMarshaler implements json.Marshaler, returning an object so that
+// the encoder re-enters its indenting logic for the nested value.
+type indentLeakMarshaler struct{}
+
+func (indentLeakMarshaler) MarshalJSON() ([]byte, error) {
+	return []byte(`{"k":[1,2]}`), nil
+}
+
+// TestEncode_IndentDepthAfterFailedEncode verifies that an Encode that fails
+// partway through a struct, array or map does not leave the Encoder's
+// indenter at a stale depth, so that the next Encode on the same Encoder is
+// indented exactly as encoding/json would. It also verifies that a nested
+// json.Marshaler value, which re-enters the encoder mid-encode, still indents
+// correctly after a prior failure. See issue #58.
+func TestEncode_IndentDepthAfterFailedEncode(t *testing.T) {
+	type inner struct{ F func() }
+	type outer struct{ Bad inner }
+	type withMarshaler struct {
+		A int
+		M indentLeakMarshaler
+	}
+
+	failing := []interface{}{
+		outer{},                      // fails two struct levels deep
+		[]func(){nil},                // fails inside an array
+		map[string]func(){"a": nil},  // fails inside a map
+		[]interface{}{[]func(){nil}}, // fails inside a nested array
+	}
+
+	followUps := []interface{}{
+		map[string]int{"a": 1},
+		[]int{1, 2},
+		withMarshaler{A: 1},
+	}
+
+	for _, bad := range failing {
+		for _, good := range followUps {
+			name := fmt.Sprintf("%T_then_%T", bad, good)
+			t.Run(name, func(t *testing.T) {
+				wantBuf := &bytes.Buffer{}
+				stdEnc := stdjson.NewEncoder(wantBuf)
+				stdEnc.SetIndent("", "  ")
+				require.NoError(t, stdEnc.Encode(good))
+
+				buf := &bytes.Buffer{}
+				enc := jsoncolor.NewEncoder(buf)
+				enc.SetIndent("", "  ")
+				require.Error(t, enc.Encode(bad))
+
+				buf.Reset()
+				require.NoError(t, enc.Encode(good))
+				require.Equal(t, wantBuf.String(), buf.String())
+			})
+		}
+	}
+}
