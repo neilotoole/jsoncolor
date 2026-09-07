@@ -41,6 +41,50 @@ func TestEquivalenceStdlibCode(t *testing.T) {
 // otherwise nondeterministic across the two calls — without sorting,
 // fast and slow would see different orderings of the same map and
 // diverge harmlessly.
+// Types for parityExtraValues.
+type parityInner struct {
+	X int    `json:",omitempty"`
+	Y string `json:",omitempty"`
+}
+
+type parityNilEmbedOnly struct{ *parityInner }
+
+type parityNilEmbedMiddle struct {
+	A int
+	*parityInner
+	C int
+}
+
+type parityNilEmbedLast struct {
+	A int
+	C int
+	*parityInner
+}
+
+type parityAllOmitEmpty struct {
+	A int    `json:",omitempty"`
+	B string `json:",omitempty"`
+}
+
+type parityFuncField struct{ F func() }
+
+// parityExtraValues supplements the vendored testValues with shapes that
+// exercise struct rollback, omitempty through embedded pointers, empty
+// indented structs, and encode errors, on both the fast and slow paths.
+var parityExtraValues = []interface{}{
+	parityNilEmbedOnly{},
+	parityNilEmbedMiddle{A: 1, C: 2},
+	parityNilEmbedLast{A: 1, C: 2},
+	parityNilEmbedMiddle{A: 1, parityInner: &parityInner{}, C: 2},
+	parityNilEmbedMiddle{A: 1, parityInner: &parityInner{X: 5, Y: "y"}, C: 2},
+	parityAllOmitEmpty{},
+	struct{ In parityAllOmitEmpty }{},
+	parityFuncField{},
+	[]func(){nil},
+	map[string]func(){"a": nil},
+	[]interface{}{1, parityFuncField{}},
+}
+
 func TestEncode_FastPathParity(t *testing.T) {
 	prefix, indent2 := "", "  "
 	tab := "\t"
@@ -62,7 +106,7 @@ func TestEncode_FastPathParity(t *testing.T) {
 
 	for _, cfg := range configs {
 		t.Run(cfg.name, func(t *testing.T) {
-			for _, v := range testValues {
+			for _, v := range append(testValues[:], parityExtraValues...) {
 				t.Run(testName(v), func(t *testing.T) {
 					// Each call uses its own Indenter clone because the
 					// Indenter carries per-encode depth state.
@@ -79,6 +123,9 @@ func TestEncode_FastPathParity(t *testing.T) {
 						t.Fatalf("error mismatch: fast=%v slow=%v", fastErr, slowErr)
 					}
 					if fastErr != nil {
+						if fastErr.Error() != slowErr.Error() {
+							t.Fatalf("error text mismatch: fast=%v slow=%v", fastErr, slowErr)
+						}
 						return
 					}
 
