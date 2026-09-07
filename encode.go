@@ -663,6 +663,8 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 		return e.clrs.appendNull(b), nil
 	}
 
+	start := len(b)
+
 	if (e.flags & SortMapKeys) == 0 {
 		// Optimized code path when the program does not need the map keys to be
 		// sorted.
@@ -685,7 +687,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 
 				b, err = e.encodeKey(b, unsafe.Pointer(&k))
 				if err != nil {
-					return b, err
+					return b[:start], err
 				}
 
 				b = e.clrs.appendPunc(b, ':')
@@ -693,7 +695,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 
 				b, err = appendInternal(b, v, e.flags, e.clrs, e.indentr, e.forceSlow)
 				if err != nil {
-					return b, err
+					return b[:start], err
 				}
 
 				i++
@@ -716,7 +718,6 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 	}
 	sort.Sort(s)
 
-	start := len(b)
 	var err error
 	b = e.clrs.appendPunc(b, '{')
 
@@ -768,6 +769,8 @@ func (e encoder) encodeMapStringInterfacePlain(b []byte, p unsafe.Pointer) ([]by
 		return append(b, "null"...), nil
 	}
 
+	start := len(b)
+
 	if (e.flags & SortMapKeys) == 0 {
 		b = append(b, '{')
 		i := 0
@@ -777,11 +780,11 @@ func (e encoder) encodeMapStringInterfacePlain(b []byte, p unsafe.Pointer) ([]by
 			}
 			var err error
 			if b, err = e.encodeKey(b, unsafe.Pointer(&k)); err != nil {
-				return b, err
+				return b[:start], err
 			}
 			b = append(b, ':')
 			if b, err = appendInternal(b, v, e.flags, nil, e.indentr, false); err != nil {
-				return b, err
+				return b[:start], err
 			}
 			i++
 		}
@@ -797,7 +800,6 @@ func (e encoder) encodeMapStringInterfacePlain(b []byte, p unsafe.Pointer) ([]by
 	}
 	sort.Sort(s)
 
-	start := len(b)
 	var err error
 	b = append(b, '{')
 	for i := range s.elements {
@@ -830,6 +832,8 @@ func (e encoder) encodeMapStringInterfaceIndented(b []byte, p unsafe.Pointer) ([
 		return append(b, "null"...), nil
 	}
 
+	start := len(b)
+
 	if (e.flags & SortMapKeys) == 0 {
 		b = append(b, '{')
 		if len(m) != 0 {
@@ -843,11 +847,11 @@ func (e encoder) encodeMapStringInterfaceIndented(b []byte, p unsafe.Pointer) ([
 				b = e.indentr.appendIndentFast(b)
 				var err error
 				if b, err = e.encodeKey(b, unsafe.Pointer(&k)); err != nil {
-					return b, err
+					return b[:start], err
 				}
 				b = append(b, ':', ' ')
 				if b, err = appendInternal(b, v, e.flags, nil, e.indentr, false); err != nil {
-					return b, err
+					return b[:start], err
 				}
 				i++
 			}
@@ -867,7 +871,6 @@ func (e encoder) encodeMapStringInterfaceIndented(b []byte, p unsafe.Pointer) ([
 	}
 	sort.Sort(s)
 
-	start := len(b)
 	var err error
 	b = append(b, '{')
 	if len(s.elements) > 0 {
@@ -1023,6 +1026,8 @@ func (e encoder) encodeMapStringRawMessagePlain(b []byte, p unsafe.Pointer) ([]b
 		return append(b, "null"...), nil
 	}
 
+	start := len(b)
+
 	if (e.flags & SortMapKeys) == 0 {
 		b = append(b, '{')
 		i := 0
@@ -1032,12 +1037,12 @@ func (e encoder) encodeMapStringRawMessagePlain(b []byte, p unsafe.Pointer) ([]b
 			}
 			var err error
 			if b, err = e.encodeKey(b, unsafe.Pointer(&k)); err != nil {
-				return b, err
+				return b[:start], err
 			}
 			b = append(b, ':')
 			v := m[k]
 			if b, err = e.encodeRawMessage(b, unsafe.Pointer(&v)); err != nil {
-				return b, err
+				return b[:start], err
 			}
 			i++
 		}
@@ -1053,7 +1058,6 @@ func (e encoder) encodeMapStringRawMessagePlain(b []byte, p unsafe.Pointer) ([]b
 	}
 	sort.Sort(s)
 
-	start := len(b)
 	var err error
 	b = append(b, '{')
 	for i := range s.elements {
@@ -1086,6 +1090,8 @@ func (e encoder) encodeMapStringRawMessageIndented(b []byte, p unsafe.Pointer) (
 		return append(b, "null"...), nil
 	}
 
+	start := len(b)
+
 	if (e.flags & SortMapKeys) == 0 {
 		b = append(b, '{')
 		if len(m) != 0 {
@@ -1099,12 +1105,12 @@ func (e encoder) encodeMapStringRawMessageIndented(b []byte, p unsafe.Pointer) (
 				b = e.indentr.appendIndentFast(b)
 				var err error
 				if b, err = e.encodeKey(b, unsafe.Pointer(&k)); err != nil {
-					return b, err
+					return b[:start], err
 				}
 				b = append(b, ':', ' ')
 				v := m[k]
 				if b, err = e.encodeRawMessage(b, unsafe.Pointer(&v)); err != nil {
-					return b, err
+					return b[:start], err
 				}
 				i++
 			}
@@ -1124,7 +1130,6 @@ func (e encoder) encodeMapStringRawMessageIndented(b []byte, p unsafe.Pointer) (
 	}
 	sort.Sort(s)
 
-	start := len(b)
 	var err error
 	b = append(b, '{')
 	if len(s.elements) > 0 {

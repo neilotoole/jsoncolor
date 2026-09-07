@@ -30,17 +30,6 @@ func TestEquivalenceStdlibCode(t *testing.T) {
 	require.Equal(t, bufStdj.String(), bufJ.String())
 }
 
-// TestEncode_FastPathParity asserts that the colorless encode paths
-// produce byte-identical output to the colorized walk for every value
-// in testValues. Append (the public entry point) takes the fast path
-// when clrs is nil; appendInternal with forceSlow=true forces the
-// colorized walk regardless. The two outputs must be equal, otherwise
-// the fast path has diverged.
-//
-// SortMapKeys is included in every config because map iteration is
-// otherwise nondeterministic across the two calls — without sorting,
-// fast and slow would see different orderings of the same map and
-// diverge harmlessly.
 // Types for parityExtraValues.
 type parityInner struct {
 	X int    `json:",omitempty"`
@@ -85,6 +74,17 @@ var parityExtraValues = []interface{}{
 	[]interface{}{1, parityFuncField{}},
 }
 
+// TestEncode_FastPathParity asserts that the colorless encode paths
+// produce byte-identical output to the colorized walk for every value
+// in testValues. Append (the public entry point) takes the fast path
+// when clrs is nil; appendInternal with forceSlow=true forces the
+// colorized walk regardless. The two outputs must be equal, otherwise
+// the fast path has diverged.
+//
+// SortMapKeys is included in every config because map iteration is
+// otherwise nondeterministic across the two calls — without sorting,
+// fast and slow would see different orderings of the same map and
+// diverge harmlessly.
 func TestEncode_FastPathParity(t *testing.T) {
 	prefix, indent2 := "", "  "
 	tab := "\t"
@@ -125,6 +125,9 @@ func TestEncode_FastPathParity(t *testing.T) {
 					if fastErr != nil {
 						if fastErr.Error() != slowErr.Error() {
 							t.Fatalf("error text mismatch: fast=%v slow=%v", fastErr, slowErr)
+						}
+						if !bytes.Equal(fast, slow) {
+							t.Fatalf("error-path byte mismatch: fast=%q slow=%q", fast, slow)
 						}
 						return
 					}
@@ -196,5 +199,48 @@ func BenchmarkFastVsSlow(b *testing.B) {
 				}
 			})
 		})
+	}
+}
+
+// TestEncode_UnsortedMapErrorRollsBack verifies that when an element of a
+// map fails to encode with SortMapKeys unset, both the fast and slow paths
+// roll the buffer back to its length on entry, matching the sorted branches
+// and every other container. Single-key maps keep iteration deterministic.
+func TestEncode_UnsortedMapErrorRollsBack(t *testing.T) {
+	values := []interface{}{
+		map[string]RawMessage{"a": RawMessage(`{bad`)},
+		map[string]interface{}{"a": func() {}},
+		map[string]int{"a": 1, "b": 2}, // control: must succeed on both paths
+	}
+
+	for _, indentr := range []*Indenter{nil, NewIndenter("", "  ")} {
+		for _, v := range values {
+			name := testName(v)
+			if indentr != nil {
+				name += "/indent"
+			}
+			t.Run(name, func(t *testing.T) {
+				prefix := []byte("prefix")
+
+				fast, fastErr := Append(append([]byte(nil), prefix...), v, 0, nil, indentr)
+				slow, slowErr := appendInternal(append([]byte(nil), prefix...), v, 0, nil, indentr, true)
+
+				if (fastErr == nil) != (slowErr == nil) {
+					t.Fatalf("error mismatch: fast=%v slow=%v", fastErr, slowErr)
+				}
+				if fastErr == nil {
+					return
+				}
+				if fastErr.Error() != slowErr.Error() {
+					t.Fatalf("error text mismatch: fast=%v slow=%v", fastErr, slowErr)
+				}
+				if string(fast) != string(prefix) {
+					t.Errorf("fast path did not roll back: %q", fast)
+				}
+				if string(slow) != string(prefix) {
+					t.Errorf("slow path did not roll back: %q", slow)
+				}
+			})
+		}
 	}
 }
