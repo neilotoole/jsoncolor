@@ -990,3 +990,51 @@ func TestEncode_IndentDepthAfterFailedEncode(t *testing.T) {
 		}
 	}
 }
+
+// TestEncode_MapStringRawMessage_InvalidValue verifies that an invalid
+// RawMessage value in a map[string]RawMessage produces an error regardless of
+// whether map keys are sorted or output is indented, and that a valid map
+// still encodes correctly on both paths. See issue #62.
+func TestEncode_MapStringRawMessage_InvalidValue(t *testing.T) {
+	invalid := map[string]jsoncolor.RawMessage{
+		"a": jsoncolor.RawMessage(`{"x":1}`),
+		"b": jsoncolor.RawMessage(`{bad`),
+	}
+	valid := map[string]jsoncolor.RawMessage{
+		"a": jsoncolor.RawMessage(`{"x":1}`),
+		"b": jsoncolor.RawMessage(`[1,2]`),
+	}
+
+	for _, sorted := range []bool{false, true} {
+		for _, indent := range []bool{false, true} {
+			name := fmt.Sprintf("sorted=%v/indent=%v", sorted, indent)
+			t.Run(name, func(t *testing.T) {
+				newEnc := func(buf *bytes.Buffer) *jsoncolor.Encoder {
+					enc := jsoncolor.NewEncoder(buf)
+					enc.SetSortMapKeys(sorted)
+					if indent {
+						enc.SetIndent("", "  ")
+					}
+					return enc
+				}
+
+				buf := &bytes.Buffer{}
+				require.Error(t, newEnc(buf).Encode(invalid))
+				require.Empty(t, buf.String(), "nothing should be written on error")
+
+				buf.Reset()
+				require.NoError(t, newEnc(buf).Encode(valid))
+				require.True(t, stdjson.Valid(buf.Bytes()), "invalid JSON: %q", buf.String())
+
+				// Semantic comparison with encoding/json, since the unsorted
+				// path may emit keys in any order.
+				var got, want interface{}
+				require.NoError(t, stdjson.Unmarshal(buf.Bytes(), &got))
+				wantBytes, err := stdjson.Marshal(valid)
+				require.NoError(t, err)
+				require.NoError(t, stdjson.Unmarshal(wantBytes, &want))
+				require.Equal(t, want, got)
+			})
+		}
+	}
+}
