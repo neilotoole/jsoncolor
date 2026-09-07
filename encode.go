@@ -1048,7 +1048,7 @@ func (e encoder) encodeTextMarshaler(b []byte, p unsafe.Pointer, t reflect.Type,
 		return e.doEncodeString(b, unsafe.Pointer(&s))
 	}
 
-	b = append(b, e.clrs.TextMarshaler...)
+	b = append(b, e.clrs.textMarshalerColor()...)
 	b, err = e.doEncodeString(b, unsafe.Pointer(&s))
 	b = append(b, ansiReset...)
 	return b, err
