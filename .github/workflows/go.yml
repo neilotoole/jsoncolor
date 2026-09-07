@@ -39,3 +39,8 @@ jobs:
 
     - name: Test
       run: go test -v .
+
+    # The race detector also enables checkptr, which catches unsafe.Pointer
+    # arithmetic that reads outside an allocation (see issue #59).
+    - name: Test (race detector)
+      run: go test -race .
