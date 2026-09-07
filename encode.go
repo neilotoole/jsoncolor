@@ -589,6 +589,8 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 		return e.clrs.appendNull(b), nil
 	}
 
+	start := len(b)
+
 	if (e.flags & SortMapKeys) == 0 {
 		// Optimized code path when the program does not need the map keys to be
 		// sorted.
@@ -622,8 +624,11 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 
 				i++
 			}
-			b = e.indentr.appendByte(b, '\n')
 			e.indentr.pop()
+			if err != nil {
+				return b[:start], err
+			}
+			b = e.indentr.appendByte(b, '\n')
 			b = e.indentr.appendIndent(b)
 		}
 
@@ -640,7 +645,6 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 	}
 	sort.Sort(s)
 
-	start := len(b)
 	var err error
 	b = e.clrs.appendPunc(b, '{')
 
