@@ -74,12 +74,13 @@ var parityExtraValues = []interface{}{
 	[]interface{}{1, parityFuncField{}},
 }
 
-// TestEncode_FastPathParity asserts that the colorless encode paths
-// produce byte-identical output to the colorized walk for every value
-// in testValues. Append (the public entry point) takes the fast path
-// when clrs is nil; appendInternal with forceSlow=true forces the
-// colorized walk regardless. The two outputs must be equal, otherwise
-// the fast path has diverged.
+// TestEncode_FastPathParity asserts that the colorless fast paths
+// produce byte-identical output to the general (slow) walk for every
+// value in testValues. Append (the public entry point) takes the fast
+// path when clrs is nil; appendInternal with forceSlow=true routes the
+// same colorless encode through the general walk instead. Neither side
+// emits color. The two outputs must be equal, otherwise the fast path
+// has diverged.
 //
 // SortMapKeys is included in every config because map iteration is
 // otherwise nondeterministic across the two calls — without sorting,
@@ -157,7 +158,7 @@ type benchMixedRecord struct {
 }
 
 // BenchmarkFastVsSlow compares the colorless fast path against the
-// colorized walk on identical data, with the output buffer pre-sized so
+// general (slow) walk on identical data, with the output buffer pre-sized so
 // growth is not measured. The only variable is whether the fast path is
 // taken: fast=Append (forceSlow=false), slow=appendInternal with
 // forceSlow=true. Any nonzero delta is the fast path's contribution.
