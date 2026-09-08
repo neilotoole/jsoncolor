@@ -1598,7 +1598,6 @@ func NewIndenter(prefix, indent string) *Indenter {
 	}
 }
 
-// push increases the indentation level.
 // enabled reports whether in produces indentation: a nil *Indenter and an
 // Indenter constructed with an empty prefix and indent are both disabled.
 // Every dispatcher that routes into an *Indented fast path, and every
@@ -1607,6 +1606,7 @@ func (in *Indenter) enabled() bool {
 	return in != nil && !in.disabled
 }
 
+// push increases the indentation level.
 func (in *Indenter) push() {
 	if in != nil {
 		in.depth++
@@ -1640,12 +1640,10 @@ func (in *Indenter) appendIndent(b []byte) []byte {
 	return in.appendIndentFast(b)
 }
 
-// appendIndentFast writes indentation to b assuming the receiver is
-// non-nil and not disabled. Callers must verify those preconditions; the
-// colorless fast paths do so once per container, then call this directly
-// to skip the per-token nil/disabled check.
-// appendIndentFast appends the prefix and depth indentation without any
-// nil or disabled check. Callers must only reach it when in.enabled().
+// appendIndentFast writes indentation to b without any nil or disabled
+// check. Callers must only reach it when in.enabled(); the colorless fast
+// paths verify that once per container, then call this directly to skip
+// the per-token check.
 func (in *Indenter) appendIndentFast(b []byte) []byte {
 	b = append(b, in.prefix...)
 	for i := 0; i < in.depth; i++ {
