@@ -183,31 +183,36 @@ func (e encoder) encodeNumber(b []byte, p unsafe.Pointer) ([]byte, error) {
 	return b, nil
 }
 
+// encodeKey is the encodeFunc form of appendKey, installed as the key codec
+// for string-keyed maps.
 func (e encoder) encodeKey(b []byte, p unsafe.Pointer) ([]byte, error) {
+	return e.appendKey(b, *(*string)(p)), nil
+}
+
+// appendKey appends the object key k, colored by Colors.Key when set.
+// Encoding a string cannot fail, so there is no error to return.
+func (e encoder) appendKey(b []byte, k string) []byte {
 	if e.clrs == nil || len(e.clrs.Key) == 0 {
-		return e.doEncodeString(b, p)
+		return e.doEncodeString(b, unsafe.Pointer(&k))
 	}
 
 	b = append(b, e.clrs.Key...)
-	var err error
-	b, err = e.doEncodeString(b, p)
-	b = append(b, ansiReset...)
-	return b, err
+	b = e.doEncodeString(b, unsafe.Pointer(&k))
+	return append(b, ansiReset...)
 }
 
 func (e encoder) encodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 	if e.clrs == nil || len(e.clrs.String) == 0 {
-		return e.doEncodeString(b, p)
+		return e.doEncodeString(b, p), nil
 	}
 
 	b = append(b, e.clrs.String...)
-	var err error
-	b, err = e.doEncodeString(b, p)
+	b = e.doEncodeString(b, p)
 	b = append(b, ansiReset...)
-	return b, err
+	return b, nil
 }
 
-func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
+func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) []byte {
 	s := *(*string)(p)
 	i := 0
 	j := 0
@@ -304,7 +309,7 @@ func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 
 	b = append(b, s[i:]...)
 	b = append(b, '"')
-	return b, nil
+	return b
 }
 
 func (e encoder) encodeToString(b []byte, p unsafe.Pointer, encode encodeFunc) ([]byte, error) {
@@ -318,9 +323,7 @@ func (e encoder) encodeToString(b []byte, p unsafe.Pointer, encode encodeFunc) (
 	j := len(b)
 	s := b[i:]
 
-	if b, err = e.doEncodeString(b, unsafe.Pointer(&s)); err != nil {
-		return b, err
-	}
+	b = e.doEncodeString(b, unsafe.Pointer(&s))
 
 	n := copy(b[i:], b[j:])
 	return b[:i+n], nil
@@ -683,10 +686,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 
 				b = e.indentr.appendIndent(b)
 
-				b, err = e.encodeKey(b, unsafe.Pointer(&k))
-				if err != nil {
-					return b[:start], err
-				}
+				b = e.appendKey(b, k)
 
 				b = e.clrs.appendPunc(b, ':')
 				b = e.indentr.appendByte(b, ' ')
@@ -729,7 +729,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 
 			b = e.indentr.appendIndent(b)
 
-			b, _ = e.encodeKey(b, unsafe.Pointer(&elem.key))
+			b = e.appendKey(b, elem.key)
 			b = e.clrs.appendPunc(b, ':')
 			b = e.indentr.appendByte(b, ' ')
 
@@ -764,7 +764,7 @@ func (e encoder) appendFastMember(b []byte, i int, ind bool, key string) []byte 
 		b = append(b, '\n')
 		b = e.indentr.appendIndentFast(b)
 	}
-	b, _ = e.encodeKey(b, unsafe.Pointer(&key))
+	b = e.appendKey(b, key)
 	b = append(b, ':')
 	if ind {
 		b = append(b, ' ')
@@ -864,7 +864,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 
 				b = e.indentr.appendIndent(b)
 
-				b, _ = e.encodeKey(b, unsafe.Pointer(&k))
+				b = e.appendKey(b, k)
 
 				b = e.clrs.appendPunc(b, ':')
 				b = e.indentr.appendByte(b, ' ')
@@ -912,7 +912,7 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 			b = e.indentr.appendIndent(b)
 
 			elem := s.elements[i]
-			b, _ = e.encodeKey(b, unsafe.Pointer(&elem.key))
+			b = e.appendKey(b, elem.key)
 			b = e.clrs.appendPunc(b, ':')
 			b = e.indentr.appendByte(b, ' ')
 
@@ -1488,18 +1488,18 @@ func (e encoder) encodeTextMarshaler(b []byte, p unsafe.Pointer, t reflect.Type,
 	}
 
 	if e.clrs == nil {
-		return e.doEncodeString(b, unsafe.Pointer(&s))
+		return e.doEncodeString(b, unsafe.Pointer(&s)), nil
 	}
 
 	clr := e.clrs.textMarshalerColor()
 	if len(clr) == 0 {
-		return e.doEncodeString(b, unsafe.Pointer(&s))
+		return e.doEncodeString(b, unsafe.Pointer(&s)), nil
 	}
 
 	b = append(b, clr...)
-	b, err = e.doEncodeString(b, unsafe.Pointer(&s))
+	b = e.doEncodeString(b, unsafe.Pointer(&s))
 	b = append(b, ansiReset...)
-	return b, err
+	return b, nil
 }
 
 func appendCompactEscapeHTML(dst, src []byte) []byte {

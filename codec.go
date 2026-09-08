@@ -737,7 +737,7 @@ func stringify(f *reflect.StructField, c codec) codec {
 func encodeString(s string, flags AppendFlags) string {
 	b := make([]byte, 0, len(s)+2)
 	e := encoder{flags: flags}
-	b, _ = e.doEncodeString(b, unsafe.Pointer(&s))
+	b = e.doEncodeString(b, unsafe.Pointer(&s))
 	return *(*string)(unsafe.Pointer(&b))
 }
 
