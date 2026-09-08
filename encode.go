@@ -473,26 +473,33 @@ func (e encoder) encodeArray(b []byte, p unsafe.Pointer, n int, size uintptr, _ 
 
 	start := len(b)
 	var err error
+	ind := e.indentr.enabled() // decided once per container; see encodeStruct
 
 	b = e.clrs.appendPunc(b, '[')
 
 	if n > 0 {
-		e.indentr.push()
+		if ind {
+			e.indentr.depth++
+		}
 		for i := 0; i < n; i++ {
 			if i != 0 {
 				b = e.clrs.appendPunc(b, ',')
 			}
 
-			b = e.indentr.appendByte(b, '\n')
-			b = e.indentr.appendIndent(b)
+			if ind {
+				b = append(b, '\n')
+				b = e.indentr.appendIndentFast(b)
+			}
 
 			if b, err = encode(e, b, unsafe.Pointer(uintptr(p)+(uintptr(i)*size))); err != nil {
 				return b[:start], err
 			}
 		}
-		e.indentr.pop()
-		b = e.indentr.appendByte(b, '\n')
-		b = e.indentr.appendIndent(b)
+		if ind {
+			e.indentr.depth--
+			b = append(b, '\n')
+			b = e.indentr.appendIndentFast(b)
+		}
 	}
 
 	b = e.clrs.appendPunc(b, ']')
@@ -1068,10 +1075,18 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 	var k string
 	var n int
 	start := len(b)
+	escapeHTML := (e.flags & EscapeHTML) != 0
+
+	// Indentation is decided once per container, as the colorless fast
+	// paths do, rather than through the nil-checked Indenter helpers on
+	// every token.
+	ind := e.indentr.enabled()
 
 	b = e.clrs.appendPunc(b, '{')
 
-	e.indentr.push()
+	if ind {
+		e.indentr.depth++
+	}
 
 	for i := range st.fields {
 		f := &st.fields[i]
@@ -1100,17 +1115,18 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 			b = e.clrs.appendPunc(b, ',')
 		}
 
-		b = e.indentr.appendByte(b, '\n')
-
-		if (e.flags & EscapeHTML) != 0 {
+		if escapeHTML {
 			k = f.html
 		} else {
 			k = f.json
 		}
 
-		b = e.indentr.appendIndent(b)
+		if ind {
+			b = append(b, '\n')
+			b = e.indentr.appendIndentFast(b)
+		}
 
-		if e.clrs == nil || len(e.clrs.Key) == 0 {
+		if len(e.clrs.Key) == 0 {
 			b = append(b, k...)
 		} else {
 			b = append(b, e.clrs.Key...)
@@ -1120,7 +1136,9 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 
 		b = e.clrs.appendPunc(b, ':')
 
-		b = e.indentr.appendByte(b, ' ')
+		if ind {
+			b = append(b, ' ')
+		}
 
 		if b, err = f.codec.encode(e, b, v); err != nil {
 			return b[:start], err
@@ -1129,11 +1147,12 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 		n++
 	}
 
-	e.indentr.pop()
-
-	if n > 0 {
-		b = e.indentr.appendByte(b, '\n')
-		b = e.indentr.appendIndent(b)
+	if ind {
+		e.indentr.depth--
+		if n > 0 {
+			b = append(b, '\n')
+			b = e.indentr.appendIndentFast(b)
+		}
 	}
 
 	b = e.clrs.appendPunc(b, '}')
