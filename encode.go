@@ -119,7 +119,7 @@ func (e encoder) encodeFloat32(b []byte, p unsafe.Pointer) ([]byte, error) {
 	b = append(b, e.clrs.Number...)
 	var err error
 	b, err = e.encodeFloat(b, float64(*(*float32)(p)), 32)
-	b = append(b, ansiReset...)
+	b = appendReset(b, e.clrs.Number)
 	return b, err
 }
 
@@ -131,7 +131,7 @@ func (e encoder) encodeFloat64(b []byte, p unsafe.Pointer) ([]byte, error) {
 	b = append(b, e.clrs.Number...)
 	var err error
 	b, err = e.encodeFloat(b, *(*float64)(p), 64)
-	b = append(b, ansiReset...)
+	b = appendReset(b, e.clrs.Number)
 	return b, err
 }
 
@@ -188,7 +188,7 @@ func (e encoder) encodeNumber(b []byte, p unsafe.Pointer) ([]byte, error) {
 
 	b = append(b, e.clrs.Number...)
 	b = append(b, n...)
-	b = append(b, ansiReset...)
+	b = appendReset(b, e.clrs.Number)
 	return b, nil
 }
 
@@ -200,7 +200,7 @@ func (e encoder) encodeKey(b []byte, p unsafe.Pointer) ([]byte, error) {
 	b = append(b, e.clrs.Key...)
 	var err error
 	b, err = e.doEncodeString(b, p)
-	b = append(b, ansiReset...)
+	b = appendReset(b, e.clrs.Key)
 	return b, err
 }
 
@@ -212,7 +212,7 @@ func (e encoder) encodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 	b = append(b, e.clrs.String...)
 	var err error
 	b, err = e.doEncodeString(b, p)
-	b = append(b, ansiReset...)
+	b = appendReset(b, e.clrs.String)
 	return b, err
 }
 
@@ -343,7 +343,7 @@ func (e encoder) encodeBytes(b []byte, p unsafe.Pointer) ([]byte, error) {
 	b = append(b, e.clrs.Bytes...)
 	var err error
 	b, err = e.doEncodeBytes(b, p)
-	return append(b, ansiReset...), err
+	return appendReset(b, e.clrs.Bytes), err
 }
 
 func (e encoder) doEncodeBytes(b []byte, p unsafe.Pointer) ([]byte, error) {
@@ -412,7 +412,7 @@ func (e encoder) encodeTime(b []byte, p unsafe.Pointer) ([]byte, error) {
 	b = append(b, '"')
 	b = t.AppendFormat(b, time.RFC3339Nano)
 	b = append(b, '"')
-	b = append(b, ansiReset...)
+	b = appendReset(b, e.clrs.Time)
 	return b, nil
 }
 
@@ -1213,7 +1213,7 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 		} else {
 			b = append(b, e.clrs.Key...)
 			b = append(b, k...)
-			b = append(b, ansiReset...)
+			b = appendReset(b, e.clrs.Key)
 		}
 
 		b = e.clrs.appendPunc(b, ':')
@@ -1584,7 +1584,7 @@ func (e encoder) appendRawMessageScalar(b []byte, v RawValue, isKey bool) []byte
 	} else {
 		b = append(b, v...)
 	}
-	return append(b, ansiReset...)
+	return appendReset(b, clr)
 }
 
 // encodeJSONMarshaler suffers from the same defect as encodeRawMessage; it
@@ -1637,9 +1637,10 @@ func (e encoder) encodeTextMarshaler(b []byte, p unsafe.Pointer, t reflect.Type,
 		return e.doEncodeString(b, unsafe.Pointer(&s))
 	}
 
-	b = append(b, e.clrs.textMarshalerColor()...)
+	clr := e.clrs.textMarshalerColor()
+	b = append(b, clr...)
 	b, err = e.doEncodeString(b, unsafe.Pointer(&s))
-	b = append(b, ansiReset...)
+	b = appendReset(b, clr)
 	return b, err
 }
 

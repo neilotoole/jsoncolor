@@ -66,6 +66,17 @@ type Colors struct {
 	TextMarshaler Color
 }
 
+// appendReset appends the ANSI reset code to b if clr is non-empty. An
+// empty Color writes no prefix, so it must write no reset either; otherwise
+// a partially populated palette would leave a bare reset after every
+// uncolored token. See issue #54.
+func appendReset(b []byte, clr Color) []byte {
+	if len(clr) == 0 {
+		return b
+	}
+	return append(b, ansiReset...)
+}
+
 // appendNull appends a colorized "null" to b.
 func (c *Colors) appendNull(b []byte) []byte {
 	if c == nil {
@@ -74,7 +85,7 @@ func (c *Colors) appendNull(b []byte) []byte {
 
 	b = append(b, c.Null...)
 	b = append(b, "null"...)
-	return append(b, ansiReset...)
+	return appendReset(b, c.Null)
 }
 
 // appendBool appends the colorized bool v to b.
@@ -94,7 +105,7 @@ func (c *Colors) appendBool(b []byte, v bool) []byte {
 		b = append(b, "false"...)
 	}
 
-	return append(b, ansiReset...)
+	return appendReset(b, c.Bool)
 }
 
 // appendInt64 appends the colorized int64 v to b.
@@ -105,7 +116,7 @@ func (c *Colors) appendInt64(b []byte, v int64) []byte {
 
 	b = append(b, c.Number...)
 	b = strconv.AppendInt(b, v, 10)
-	return append(b, ansiReset...)
+	return appendReset(b, c.Number)
 }
 
 // appendUint64 appends the colorized uint64 v to b.
@@ -116,7 +127,7 @@ func (c *Colors) appendUint64(b []byte, v uint64) []byte {
 
 	b = append(b, c.Number...)
 	b = strconv.AppendUint(b, v, 10)
-	return append(b, ansiReset...)
+	return appendReset(b, c.Number)
 }
 
 // appendPunc appends the colorized punctuation mark v to b. The color is
@@ -128,9 +139,10 @@ func (c *Colors) appendPunc(b []byte, v byte) []byte {
 		return append(b, v)
 	}
 
-	b = append(b, c.puncColor(v)...)
+	clr := c.puncColor(v)
+	b = append(b, clr...)
 	b = append(b, v)
-	return append(b, ansiReset...)
+	return appendReset(b, clr)
 }
 
 // puncColor returns the Color to use for punctuation mark v. It selects the
