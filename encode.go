@@ -213,11 +213,24 @@ func (e encoder) encodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 
 func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) []byte {
 	s := *(*string)(p)
-	i := 0
-	j := 0
 	escapeHTML := (e.flags & EscapeHTML) != 0
 
 	b = append(b, '"')
+
+	i := 0
+	j := 0
+
+	// Most strings contain nothing that needs escaping. Find the first byte
+	// that does, eight bytes at a time; when there is none, the whole string
+	// is appended in one copy. Otherwise the scalar loop below starts at that
+	// byte, with everything before it known to be clean. Strings shorter than
+	// one 8-byte word gain nothing from the scan and skip it.
+	if len(s) >= 8 {
+		if j = escapeIndex(s, escapeHTML); j < 0 {
+			b = append(b, s...)
+			return append(b, '"')
+		}
+	}
 
 	for j < len(s) {
 		c := s[j]
@@ -253,6 +266,20 @@ func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) []byte {
 		case '\t':
 			b = append(b, s[i:j]...)
 			b = append(b, '\\', 't')
+			i = j + 1
+			j = i
+			continue
+
+		case '\b':
+			b = append(b, s[i:j]...)
+			b = append(b, '\\', 'b')
+			i = j + 1
+			j = i
+			continue
+
+		case '\f':
+			b = append(b, s[i:j]...)
+			b = append(b, '\\', 'f')
 			i = j + 1
 			j = i
 			continue
