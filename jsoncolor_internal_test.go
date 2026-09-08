@@ -58,7 +58,7 @@ type parityAllOmitEmpty struct {
 type parityFuncField struct{ F func() }
 
 // parityExtraValues supplements the vendored testValues with shapes that
-// exercise struct rollback, omitempty through embedded pointers, empty
+// exercise nil embedded struct pointers, omitempty through embedded pointers, empty
 // indented structs, and encode errors, on both the fast and slow paths.
 var parityExtraValues = []interface{}{
 	parityNilEmbedOnly{},

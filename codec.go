@@ -482,13 +482,6 @@ func constructStructDecodeFunc(st *structType) decodeFunc {
 	}
 }
 
-func constructEmbeddedStructPointerCodec(t reflect.Type, unexported bool, offset uintptr, field codec) codec {
-	return codec{
-		encode: constructEmbeddedStructPointerEncodeFunc(t, unexported, offset, field.encode),
-		decode: constructEmbeddedStructPointerDecodeFunc(t, unexported, offset, field.decode),
-	}
-}
-
 // constructEmbeddedStructPointerEmptyFunc wraps the emptiness check of a
 // field promoted through an embedded struct pointer. Like the codec wrapper
 // above, the returned function receives the address of the pointer word in
@@ -528,18 +521,47 @@ type embeddedField struct {
 }
 
 // promoteThroughPointer adapts a field promoted through an embedded struct
-// pointer. The codec, and for omitempty fields the emptiness check, are
-// wrapped to dereference the pointer, and the offset is re-pointed at the
-// pointer word in the outer struct. Non-omitempty fields never consult the
-// emptiness check, so they skip that wrapper.
+// pointer. On return, offset addresses the pointer word in the outer struct,
+// fieldViaPointer is set, and ptrOffset holds the field's offset from the pointer
+// target, so the struct encoders can read the pointer, omit the field when it
+// is nil, and otherwise call the codec on the dereferenced address, all
+// without an intermediate wrapper (#70).
+//
+// The decode side keeps the wrapper at every level, because decoding must
+// allocate the embedded struct when the pointer is nil. The emptiness check
+// is wrapped in two cases: a field tagged omitempty must be tested through
+// the pointer (#59), and a field that is not omitempty but is itself promoted
+// through a further embedded pointer needs a check that the inner pointer is
+// non-nil, since the encoders read only the outermost pointer word, so that
+// check becomes a synthesized omitempty. The inner dereference that such a
+// field needed moves into an encode wrapper. Each level wraps the function
+// from the level below, so deeper chains compose.
 func promoteThroughPointer(embfield embeddedField, subfield structField) structField {
-	subfield.codec = constructEmbeddedStructPointerCodec(embfield.subtype.typ, embfield.unexported, subfield.offset, subfield.codec)
-	if subfield.omitempty {
+	typ, unexported := embfield.subtype.typ, embfield.unexported
+
+	subfield.codec.decode = constructEmbeddedStructPointerDecodeFunc(typ, unexported, subfield.offset, subfield.codec.decode)
+
+	switch {
+	case subfield.flags&fieldOmitEmpty != 0:
 		subfield.empty = constructEmbeddedStructPointerEmptyFunc(subfield.offset, subfield.empty)
+	case subfield.flags&fieldViaPointer != 0:
+		subfield.empty = constructEmbeddedStructPointerEmptyFunc(subfield.offset, pointerIsNil)
+		subfield.flags |= fieldOmitEmpty
 	}
+
+	if subfield.flags&fieldViaPointer != 0 {
+		subfield.codec.encode = constructEmbeddedStructPointerEncodeFunc(typ, unexported, subfield.ptrOffset, subfield.codec.encode)
+	}
+
+	subfield.flags |= fieldViaPointer
+	subfield.ptrOffset = subfield.offset
 	subfield.offset = embfield.offset
 	return subfield
 }
+
+// pointerIsNil is the emptiness check for a pointer word. It is the
+// building block promoteThroughPointer uses for inner embedded pointers.
+func pointerIsNil(p unsafe.Pointer) bool { return *(*unsafe.Pointer)(p) == nil }
 
 func appendStructFields(fields []structField, t reflect.Type, offset uintptr, seen map[reflect.Type]*structType, canAddr bool) []structField {
 	names := make(map[string]struct{})
@@ -552,7 +574,7 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 			name             = f.Name
 			anonymous        = f.Anonymous
 			isTag            = false
-			omitempty        = false
+			flags            fieldFlags
 			stringifyEnabled = false
 			unexported       = len(f.PkgPath) != 0
 		)
@@ -577,7 +599,7 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 			for _, tag := range parts[1:] {
 				switch tag {
 				case "omitempty":
-					omitempty = true
+					flags |= fieldOmitEmpty
 				case "string":
 					stringifyEnabled = true
 				}
@@ -625,15 +647,15 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 		}
 
 		fields = append(fields, structField{
-			codec:     c,
-			offset:    offset + f.Offset,
-			empty:     emptyFuncOf(f.Type),
-			tag:       isTag,
-			omitempty: omitempty,
-			name:      name,
-			index:     i << 32,
-			typ:       f.Type,
-			zero:      reflect.Zero(f.Type),
+			codec:  c,
+			offset: offset + f.Offset,
+			empty:  emptyFuncOf(f.Type),
+			tag:    isTag,
+			flags:  flags,
+			name:   name,
+			index:  i << 32,
+			typ:    f.Type,
+			zero:   reflect.Zero(f.Type),
 		})
 
 		names[name] = struct{}{}
@@ -965,11 +987,18 @@ type structType struct {
 }
 
 type structField struct {
-	codec     codec
-	offset    uintptr
-	empty     emptyFunc
-	tag       bool
-	omitempty bool
+	codec  codec
+	offset uintptr
+	empty  emptyFunc
+	tag    bool
+	// flags holds the per-field conditions the struct encoders test before
+	// writing a field. They share one byte so that a field with neither set,
+	// the common case, costs a single test in the encode loop.
+	flags fieldFlags
+	// ptrOffset applies to a fieldViaPointer field: the offset of the field
+	// (or, for deeper chains, of the next pointer word) from the target of
+	// the pointer that offset addresses.
+	ptrOffset uintptr
 	json      string
 	html      string
 	name      string
@@ -977,6 +1006,24 @@ type structField struct {
 	zero      reflect.Value
 	index     int
 }
+
+// fieldFlags is the set of conditions in structField.flags.
+type fieldFlags uint8
+
+const (
+	// fieldOmitEmpty marks a field whose emptiness check, empty, decides
+	// whether it is written. It comes from the omitempty tag, and is also
+	// synthesized for a field promoted through more than one level of
+	// embedded struct pointers, whose inner pointer may be nil.
+	fieldOmitEmpty fieldFlags = 1 << iota
+
+	// fieldViaPointer marks a field promoted through an embedded struct
+	// pointer. offset then addresses the outermost such pointer word in the
+	// enclosing struct. The struct encoders skip the field when the pointer
+	// is nil, as encoding/json does, and otherwise encode it at
+	// target+ptrOffset. See issues #56 and #70.
+	fieldViaPointer
+)
 
 func unmarshalTypeError(b []byte, t reflect.Type) error {
 	return &UnmarshalTypeError{Value: strconv.Quote(prefix(b)), Type: t}
