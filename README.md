@@ -1,6 +1,6 @@
 [![Actions Status](https://github.com/neilotoole/jsoncolor/workflows/Go/badge.svg)](https://github.com/neilotoole/jsoncolor/actions?query=workflow%3AGo)
 [![Go Report Card](https://goreportcard.com/badge/neilotoole/jsoncolor)](https://goreportcard.com/report/neilotoole/jsoncolor)
-[![release](https://img.shields.io/badge/release-v0.9.1-green.svg)](https://github.com/neilotoole/jsoncolor#v091)
+[![release](https://img.shields.io/badge/release-v0.10.0-green.svg)](https://github.com/neilotoole/jsoncolor#v0100)
 [![Go Reference](https://pkg.go.dev/badge/github.com/neilotoole/jsoncolor.svg)](https://pkg.go.dev/github.com/neilotoole/jsoncolor)
 [![license](https://img.shields.io/github/license/neilotoole/jsoncolor)](./LICENSE)
 
@@ -19,7 +19,7 @@ From the example [`jc`](./cmd/jc/main.go) app:
 
 ## Usage
 
-Get the package per the normal mechanism (requires Go 1.17+):
+Get the package per the normal mechanism (requires Go 1.25+):
 
 ```shell
 go get -u github.com/neilotoole/jsoncolor
@@ -223,10 +223,54 @@ To report a security vulnerability, see [`SECURITY.md`](SECURITY.md).
 <a name="history"></a>
 ## CHANGELOG
 
-History: this package is an extract of [`sq`](https://github.com/neilotoole/sq)'s JSON encoding package, which itself is a fork of the
+History: this package started as an extract of [`sq`](https://github.com/neilotoole/sq)'s JSON
+encoding package, which itself was a fork of the
 [`segmentio/encoding`](https://github.com/segmentio/encoding) JSON encoding package. Note that the
 original `sq` JSON encoder was forked from Segment's codebase at `v0.1.14`, so
 the codebases have drifted significantly by now.
+
+### [v0.10.0](https://github.com/neilotoole/jsoncolor/releases/tag/v0.10.0)
+
+Encoder correctness fixes, a fast path for uncolored output, a performance
+pass against the segmentio upstream, and a stricter CI test run. There are no
+exported API changes. The minor version bump signals that several of the
+fixes change output at the byte level, so stored fixtures may need
+regenerating; in particular, colored output from a partially populated
+palette changes (see [#54](https://github.com/neilotoole/jsoncolor/issues/54)),
+though nothing visible changes on a terminal.
+
+- [#73](https://github.com/neilotoole/jsoncolor/pull/73): Backspace and form feed in strings are now written as `\b` and `\f` instead of `\u0008` and `\u000c`. This matches `encoding/json` since [Go 1.22](https://go.dev/doc/go1.22#encoding/json), which made the same change; this package had kept the older spelling. Both forms decode to the same bytes, so nothing changes semantically, but output containing either character differs byte-for-byte from earlier releases. Anything that compares encoder output against stored fixtures, golden files or checksums may need those regenerated.
+- [#44](https://github.com/neilotoole/jsoncolor/issues/44): Fast-path the encode walk when no colors and no indenter are set, skipping the per-token nil-receiver dispatch. Output is byte-identical to the general walk, enforced by a parity test that also covers error paths.
+- [#53](https://github.com/neilotoole/jsoncolor/issues/53): `Colors.TextMarshaler` falls back to `Colors.String` when unset, the same way the granular punctuation fields fall back to `Colors.Punc`. Previously an unset field produced an uncolored token followed by a stray ANSI reset.
+- [#54](https://github.com/neilotoole/jsoncolor/issues/54): An empty `Color` now emits neither a prefix nor a reset, as the `Color` docs always promised. `&Colors{}` produces output identical to a nil palette, and `DefaultColors()` no longer emits a reset after every punctuation mark.
+- [#56](https://github.com/neilotoole/jsoncolor/issues/56): A nil embedded struct pointer no longer leaves a double or trailing comma behind, and an indented struct whose every field is omitted encodes as `{}`, matching `encoding/json`.
+- [#58](https://github.com/neilotoole/jsoncolor/issues/58): A failed `Encode` no longer leaks indenter depth into later `Encode` calls on the same `Encoder`.
+- [#59](https://github.com/neilotoole/jsoncolor/issues/59): `omitempty` on a field promoted through an embedded struct pointer is evaluated on the promoted field, not on the pointer word. Previously zero-valued fields were emitted, and with the embedded pointer as the last field the check could read past the end of the struct.
+- [#62](https://github.com/neilotoole/jsoncolor/issues/62): `map[string]RawMessage` with an invalid value now returns an error when map keys are unsorted instead of silently emitting invalid JSON. All map branches now roll the output buffer back to its entry length on error.
+- CI runs the test suite under the race detector as well, which enables `checkptr` and would have caught the out-of-bounds read fixed in #59.
+- [#65](https://github.com/neilotoole/jsoncolor/pull/65): Updated dependencies: `mattn/go-colorable` v0.1.15, `golang.org/x/sys` v0.47.0, and `golang.org/x/term` v0.45.0 (plus test-only `stretchr/testify` v1.12.1).
+- [#66](https://github.com/neilotoole/jsoncolor/issues/66): A trusted `RawMessage` that is not well-formed JSON no longer leaks indenter depth into later `Encode` calls. End of input inside a container is now reported as a syntax error internally, so the verbatim fallback starts from a clean depth.
+- [#67](https://github.com/neilotoole/jsoncolor/issues/67): A nil `[]byte` is now a single null token colored by `Colors.Null`, instead of a null nested inside the `Colors.Bytes` prefix with two resets.
+- [#70](https://github.com/neilotoole/jsoncolor/issues/70): Fields promoted through an embedded struct pointer are skipped before anything is written when the pointer is nil, replacing the write-then-truncate rollback. No behavior change.
+- [#73](https://github.com/neilotoole/jsoncolor/pull/73): Encoder performance. Strings are scanned for escapes eight bytes at a time and copied whole when clean; integers use a dedicated base-10 formatter; `map[string]string`, `map[string]bool` and `map[string][]string` no longer go through reflect and encode with zero allocations; struct member prefixes are precomputed; and the colorized walk decides indentation once per container. A per-shape head-to-head benchmark against the segmentio upstream, `BenchmarkCmp`, is included.
+
+Taken together, the changes in this release alter encode time against v0.9.1 as follows, measured with `BenchmarkCmp` on an Apple M1 Max (Go 1.26, interleaved runs, benchstat). The colorless and colored columns use a nil palette and `DefaultColors()` respectively. The segmentio upstream reference cells did not move.
+
+| Shape                                | Colorless              | Colored |
+|--------------------------------------|------------------------|---------|
+| `[]string`, 43-byte ASCII            | -65%                   | -64%    |
+| `map[string]string`                  | -61% (101 allocs to 0) | -59%    |
+| `[]int`                              | -24%                   | -22%    |
+| `[]struct`                           | -21%                   | -25%    |
+| `[]string`, short                    | -13%                   | -21%    |
+| `[][]any` rows of mixed values       | -14%                   | -19%    |
+| Decoded Sakila JSON document (`any`) | -15%                   | -19%    |
+| `map[string]any`                     | -9%                    | -14%    |
+| `[]string` with escapes              | -7%                    | -10%    |
+| `[]float64`                          | -3%                    | -5%     |
+| `[]string`, non-ASCII                | no change              | -6%     |
+
+`BenchmarkCodeEncoder`, the large struct document from the Go standard library's tests, is 25% faster. Across all encode benchmarks the geomean improvement is 18%.
 
 ### [v0.9.1](https://github.com/neilotoole/jsoncolor/releases/tag/v0.9.1)
 
