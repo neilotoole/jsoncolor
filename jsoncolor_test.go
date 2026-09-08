@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/segmentio/encoding/json"
 
@@ -667,10 +669,10 @@ func TestEncode_Punc_OnlyPunc(t *testing.T) {
 	got := puncEncode(t, clrs, v)
 
 	const reset = "\x1b[0m"
-	// When colors are enabled, keys and scalar values render with an
-	// (empty) color prefix followed by a reset suffix.
-	key := func(s string) string { return "\"" + s + "\"" + reset }
-	val := func(s string) string { return s + reset }
+	// Keys and scalar values have no color set, so they render bare: an
+	// empty Color emits neither a prefix nor a reset.
+	key := func(s string) string { return "\"" + s + "\"" }
+	val := func(s string) string { return s }
 	// Every structural punctuation char is wrapped with the Punc color.
 	want := punc + "[" + reset + "\n  " +
 		punc + "{" + reset + "\n    " +
@@ -703,8 +705,8 @@ func TestEncode_Punc_GranularOverride(t *testing.T) {
 
 	got := puncEncode(t, clrs, v)
 
-	key := func(s string) string { return "\"" + s + "\"" + reset }
-	val := func(s string) string { return s + reset }
+	key := func(s string) string { return "\"" + s + "\"" }
+	val := func(s string) string { return s }
 	// Brackets use the granular color; braces, comma and colon fall back to Punc.
 	want := brackets + "[" + reset + "\n  " +
 		punc + "{" + reset + "\n    " +
@@ -740,8 +742,8 @@ func TestEncode_Punc_AllGranular(t *testing.T) {
 
 	got := puncEncode(t, clrs, v)
 
-	key := func(s string) string { return "\"" + s + "\"" + reset }
-	val := func(s string) string { return s + reset }
+	key := func(s string) string { return "\"" + s + "\"" }
+	val := func(s string) string { return s }
 	want := brackets + "[" + reset + "\n  " +
 		braces + "{" + reset + "\n    " +
 		key("a") + colon + ":" + reset + " " + val("1") + comma + "," + reset + "\n    " +
@@ -1036,5 +1038,80 @@ func TestEncode_MapStringRawMessage_InvalidValue(t *testing.T) {
 				require.Equal(t, want, got)
 			})
 		}
+	}
+}
+
+// emptyColorValue exercises every token type the colored walk emits: null,
+// bool, number, string, key, bytes, time, TextMarshaler, RawMessage and all
+// four punctuation classes.
+var emptyColorValue = map[string]interface{}{
+	"null":   nil,
+	"bool":   true,
+	"int":    42,
+	"float":  1.5,
+	"str":    "s",
+	"bytes":  []byte("b"),
+	"time":   time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC),
+	"tm":     TextMarshaler{Text: "t"},
+	"raw":    jsoncolor.RawMessage(`{"k":[1,"v",null]}`),
+	"nested": []interface{}{1, "x", map[string]interface{}{"y": false}},
+}
+
+func encodeWith(t *testing.T, clrs *jsoncolor.Colors, indent bool, v interface{}) string {
+	t.Helper()
+	buf := &bytes.Buffer{}
+	enc := jsoncolor.NewEncoder(buf)
+	enc.SetSortMapKeys(true)
+	enc.SetColors(clrs)
+	if indent {
+		enc.SetIndent("", "  ")
+	}
+	require.NoError(t, enc.Encode(v))
+	return buf.String()
+}
+
+// TestEncode_EmptyColors_NoReset verifies the documented contract that an
+// empty Color results in no colorization: a non-nil but empty palette must
+// produce output byte-identical to a nil palette, with no stray ANSI reset
+// after any token. See issue #54.
+func TestEncode_EmptyColors_NoReset(t *testing.T) {
+	for _, indent := range []bool{false, true} {
+		t.Run(fmt.Sprintf("indent=%v", indent), func(t *testing.T) {
+			want := encodeWith(t, nil, indent, emptyColorValue)
+			got := encodeWith(t, &jsoncolor.Colors{}, indent, emptyColorValue)
+			require.Equal(t, want, got)
+			require.NotContains(t, got, "\x1b[")
+		})
+	}
+}
+
+// TestEncode_PartialColors_OnlySetFieldsEmit verifies that a palette with a
+// single field set colors exactly that token type and leaves every other
+// token bare, with no reset anywhere else.
+func TestEncode_PartialColors_OnlySetFieldsEmit(t *testing.T) {
+	const (
+		green = "\x1b[32m"
+		reset = "\x1b[0m"
+	)
+	clrs := &jsoncolor.Colors{String: jsoncolor.Color(green)}
+	got := encodeWith(t, clrs, false, emptyColorValue)
+
+	// Strip the string coloring and the result must equal the plain output.
+	plain := strings.ReplaceAll(strings.ReplaceAll(got, green, ""), reset, "")
+	require.Equal(t, encodeWith(t, nil, false, emptyColorValue), plain)
+
+	// Every reset must be preceded by a green-colored string token, so the
+	// counts match and there are no bare resets.
+	require.Equal(t, strings.Count(got, green), strings.Count(got, reset))
+	require.Equal(t, 4, strings.Count(got, green), "str, tm (falls back to String), nested x, and v inside raw")
+}
+
+// TestEncode_DefaultColors_NoPuncReset verifies that DefaultColors, whose
+// Punc is intentionally empty, emits no reset after punctuation.
+func TestEncode_DefaultColors_NoPuncReset(t *testing.T) {
+	const reset = "\x1b[0m"
+	got := encodeWith(t, jsoncolor.DefaultColors(), false, map[string]interface{}{"a": 1, "b": []interface{}{true}})
+	for _, punc := range []string{"{", "}", "[", "]", ",", ":"} {
+		require.NotContains(t, got, punc+reset, "bare reset after %q in %q", punc, got)
 	}
 }

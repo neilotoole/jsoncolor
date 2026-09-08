@@ -68,7 +68,7 @@ type Colors struct {
 
 // appendNull appends a colorized "null" to b.
 func (c *Colors) appendNull(b []byte) []byte {
-	if c == nil {
+	if c == nil || len(c.Null) == 0 {
 		return append(b, "null"...)
 	}
 
@@ -79,7 +79,7 @@ func (c *Colors) appendNull(b []byte) []byte {
 
 // appendBool appends the colorized bool v to b.
 func (c *Colors) appendBool(b []byte, v bool) []byte {
-	if c == nil {
+	if c == nil || len(c.Bool) == 0 {
 		if v {
 			return append(b, "true"...)
 		}
@@ -99,7 +99,7 @@ func (c *Colors) appendBool(b []byte, v bool) []byte {
 
 // appendInt64 appends the colorized int64 v to b.
 func (c *Colors) appendInt64(b []byte, v int64) []byte {
-	if c == nil {
+	if c == nil || len(c.Number) == 0 {
 		return strconv.AppendInt(b, v, 10)
 	}
 
@@ -110,7 +110,7 @@ func (c *Colors) appendInt64(b []byte, v int64) []byte {
 
 // appendUint64 appends the colorized uint64 v to b.
 func (c *Colors) appendUint64(b []byte, v uint64) []byte {
-	if c == nil {
+	if c == nil || len(c.Number) == 0 {
 		return strconv.AppendUint(b, v, 10)
 	}
 
@@ -128,7 +128,12 @@ func (c *Colors) appendPunc(b []byte, v byte) []byte {
 		return append(b, v)
 	}
 
-	b = append(b, c.puncColor(v)...)
+	clr := c.puncColor(v)
+	if len(clr) == 0 {
+		return append(b, v)
+	}
+
+	b = append(b, clr...)
 	b = append(b, v)
 	return append(b, ansiReset...)
 }
