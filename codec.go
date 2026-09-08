@@ -986,25 +986,65 @@ type structType struct {
 	typ         reflect.Type
 }
 
+// structField is the per-field entry in a structType. It is computed once
+// per struct type by constructStructType and cached, so the struct encoders
+// and decoder can walk a value without consulting reflect: each field is
+// reached by adding offset to the struct's address and handed to codec.
+//
+// Fields promoted from embedded structs appear here alongside the struct's
+// own fields, already resolved for ambiguity and dominance as encoding/json
+// specifies, and sorted into declaration order by index.
 type structField struct {
-	codec  codec
+	// codec encodes and decodes the field's value, given its address.
+	codec codec
+
+	// offset is the field's byte offset from the address of the enclosing
+	// struct. For a field promoted through an embedded struct pointer
+	// (fieldViaPointer), it is the offset of that pointer word instead, and
+	// ptrOffset completes the path.
 	offset uintptr
-	empty  emptyFunc
-	tag    bool
+
+	// empty reports whether the value at the field's address is empty in
+	// the omitempty sense. It is consulted only when fieldOmitEmpty is set.
+	empty emptyFunc
+
+	// tag reports that name came from a json struct tag rather than the Go
+	// field name. When promoted fields collide on a name, a tagged field
+	// dominates untagged ones; it is cleared on promotion so that dominance
+	// does not carry more than one level up.
+	tag bool
+
 	// flags holds the per-field conditions the struct encoders test before
 	// writing a field. They share one byte so that a field with neither set,
 	// the common case, costs a single test in the encode loop.
 	flags fieldFlags
+
 	// ptrOffset applies to a fieldViaPointer field: the offset of the field
 	// (or, for deeper chains, of the next pointer word) from the target of
 	// the pointer that offset addresses.
 	ptrOffset uintptr
-	json      string
-	html      string
-	name      string
-	typ       reflect.Type
-	zero      reflect.Value
-	index     int
+
+	// json and html are the field's key as it is written to the output:
+	// name quoted and escaped, without and with HTML escaping respectively.
+	// They are precomputed so the encoders append them as-is.
+	json string
+	html string
+
+	// name is the JSON member name, from the json tag if present, otherwise
+	// the Go field name. The decoder looks fields up by it.
+	name string
+
+	// typ and zero are the field's Go type and its zero value. Neither is
+	// consulted by the encoder or decoder; they are retained from the
+	// upstream implementation.
+	typ  reflect.Type
+	zero reflect.Value
+
+	// index orders the fields as declared in the Go struct: the top-level
+	// field index in the high 32 bits, and for a promoted field the index
+	// within the embedded struct in the low 32 bits, so promoted fields sit
+	// where their embedding field is declared.
+	index int
 }
 
 // fieldFlags is the set of conditions in structField.flags.
