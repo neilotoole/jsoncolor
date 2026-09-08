@@ -24,11 +24,6 @@ type encoder struct {
 	flags   AppendFlags
 	clrs    *Colors
 	indentr *Indenter
-	// forceSlow disables encode-time fast paths so the colorless walk
-	// matches the colorized walk byte-for-byte. It exists for parity
-	// testing only and is never set in production paths; see
-	// appendInternal in json.go.
-	forceSlow bool
 }
 type decoder struct{ flags ParseFlags }
 
@@ -742,7 +737,7 @@ func stringify(f *reflect.StructField, c codec) codec {
 func encodeString(s string, flags AppendFlags) string {
 	b := make([]byte, 0, len(s)+2)
 	e := encoder{flags: flags}
-	b, _ = e.doEncodeString(b, unsafe.Pointer(&s))
+	b = e.doEncodeString(b, unsafe.Pointer(&s))
 	return *(*string)(unsafe.Pointer(&b))
 }
 
