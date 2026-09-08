@@ -719,6 +719,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 	}
 
 	start := len(b)
+	ind := e.indentr.enabled() // decided once per container; see encodeStruct
 
 	if (e.flags & SortMapKeys) == 0 {
 		// Optimized code path when the program does not need the map keys to be
@@ -726,24 +727,18 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 		b = e.clrs.appendPunc(b, '{')
 
 		if len(m) != 0 {
-			b = e.indentr.appendByte(b, '\n')
-
 			var err error
 			i := 0
 
-			e.indentr.push()
+			if ind {
+				e.indentr.depth++
+			}
 			for k, v := range m {
 				if i != 0 {
 					b = e.clrs.appendPunc(b, ',')
-					b = e.indentr.appendByte(b, '\n')
 				}
 
-				b = e.indentr.appendIndent(b)
-
-				b = e.appendKey(b, k)
-
-				b = e.clrs.appendPunc(b, ':')
-				b = e.indentr.appendByte(b, ' ')
+				b = e.appendColoredMember(b, ind, k)
 
 				b, err = Append(b, v, e.flags, e.clrs, e.indentr)
 				if err != nil {
@@ -752,9 +747,11 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 
 				i++
 			}
-			b = e.indentr.appendByte(b, '\n')
-			e.indentr.pop()
-			b = e.indentr.appendIndent(b)
+			if ind {
+				e.indentr.depth--
+				b = append(b, '\n')
+				b = e.indentr.appendIndentFast(b)
+			}
 		}
 
 		b = e.clrs.appendPunc(b, '}')
@@ -774,30 +771,27 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 	b = e.clrs.appendPunc(b, '{')
 
 	if len(s.elements) > 0 {
-		b = e.indentr.appendByte(b, '\n')
-
-		e.indentr.push()
+		if ind {
+			e.indentr.depth++
+		}
 		for i := range s.elements {
 			elem := s.elements[i]
 			if i != 0 {
 				b = e.clrs.appendPunc(b, ',')
-				b = e.indentr.appendByte(b, '\n')
 			}
 
-			b = e.indentr.appendIndent(b)
-
-			b = e.appendKey(b, elem.key)
-			b = e.clrs.appendPunc(b, ':')
-			b = e.indentr.appendByte(b, ' ')
+			b = e.appendColoredMember(b, ind, elem.key)
 
 			b, err = Append(b, elem.val, e.flags, e.clrs, e.indentr)
 			if err != nil {
 				break
 			}
 		}
-		b = e.indentr.appendByte(b, '\n')
-		e.indentr.pop()
-		b = e.indentr.appendIndent(b)
+		if ind {
+			e.indentr.depth--
+			b = append(b, '\n')
+			b = e.indentr.appendIndentFast(b)
+		}
 	}
 
 	s.release()
@@ -824,6 +818,22 @@ func (e encoder) appendFastMember(b []byte, i int, ind bool, key string) []byte 
 	// e.clrs is nil on this path, so encodeString writes the bare key.
 	b, _ = e.encodeString(b, unsafe.Pointer(&key))
 	b = append(b, ':')
+	if ind {
+		b = append(b, ' ')
+	}
+	return b
+}
+
+// appendColoredMember writes the newline and indentation (when ind is set)
+// and the colored key and colon that precede a map member on the colorized
+// walk. The separating comma is written by the caller.
+func (e encoder) appendColoredMember(b []byte, ind bool, key string) []byte {
+	if ind {
+		b = append(b, '\n')
+		b = e.indentr.appendIndentFast(b)
+	}
+	b = e.appendKey(b, key)
+	b = e.clrs.appendPunc(b, ':')
 	if ind {
 		b = append(b, ' ')
 	}

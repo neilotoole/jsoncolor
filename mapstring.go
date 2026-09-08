@@ -76,37 +76,26 @@ func encodeMapStringValues[V any](e encoder, b []byte, m map[string]V, pool *map
 	start := len(b)
 	var err error
 	s := pool.get()
+	ind := e.indentr.enabled() // decided once per container; see encodeStruct
 
 	b = e.clrs.appendPunc(b, '{')
+	if ind {
+		e.indentr.depth++
+	}
 
+	n := 0
 	if (e.flags & SortMapKeys) == 0 {
-		if len(m) != 0 {
-			b = e.indentr.appendByte(b, '\n')
-			e.indentr.push()
-
-			i := 0
-			for k, v := range m {
-				if i != 0 {
-					b = e.clrs.appendPunc(b, ',')
-					b = e.indentr.appendByte(b, '\n')
-				}
-				b = e.indentr.appendIndent(b)
-				b = e.appendKey(b, k)
-				b = e.clrs.appendPunc(b, ':')
-				b = e.indentr.appendByte(b, ' ')
-
-				s.scratch = v
-				if b, err = encodeValue(e, b, unsafe.Pointer(&s.scratch)); err != nil {
-					break
-				}
-				i++
+		for k, v := range m {
+			if n != 0 {
+				b = e.clrs.appendPunc(b, ',')
 			}
+			b = e.appendColoredMember(b, ind, k)
 
-			e.indentr.pop()
-			if err == nil {
-				b = e.indentr.appendByte(b, '\n')
-				b = e.indentr.appendIndent(b)
+			s.scratch = v
+			if b, err = encodeValue(e, b, unsafe.Pointer(&s.scratch)); err != nil {
+				break
 			}
+			n++
 		}
 	} else {
 		if cap(s.entries) < len(m) {
@@ -117,30 +106,16 @@ func encodeMapStringValues[V any](e encoder, b []byte, m map[string]V, pool *map
 		}
 		sort.Sort(s)
 
-		if len(s.entries) != 0 {
-			b = e.indentr.appendByte(b, '\n')
-			e.indentr.push()
-
-			for i := range s.entries {
-				if i != 0 {
-					b = e.clrs.appendPunc(b, ',')
-					b = e.indentr.appendByte(b, '\n')
-				}
-				b = e.indentr.appendIndent(b)
-				b = e.appendKey(b, s.entries[i].key)
-				b = e.clrs.appendPunc(b, ':')
-				b = e.indentr.appendByte(b, ' ')
-
-				if b, err = encodeValue(e, b, unsafe.Pointer(&s.entries[i].val)); err != nil {
-					break
-				}
+		for i := range s.entries {
+			if n != 0 {
+				b = e.clrs.appendPunc(b, ',')
 			}
+			b = e.appendColoredMember(b, ind, s.entries[i].key)
 
-			e.indentr.pop()
-			if err == nil {
-				b = e.indentr.appendByte(b, '\n')
-				b = e.indentr.appendIndent(b)
+			if b, err = encodeValue(e, b, unsafe.Pointer(&s.entries[i].val)); err != nil {
+				break
 			}
+			n++
 		}
 	}
 
@@ -149,6 +124,15 @@ func encodeMapStringValues[V any](e encoder, b []byte, m map[string]V, pool *map
 	if err != nil {
 		return b[:start], err
 	}
+
+	if ind {
+		e.indentr.depth--
+		if n > 0 {
+			b = append(b, '\n')
+			b = e.indentr.appendIndentFast(b)
+		}
+	}
+
 	return e.clrs.appendPunc(b, '}'), nil
 }
 
