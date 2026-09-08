@@ -635,21 +635,15 @@ var mapslicePool = sync.Pool{
 	New: func() interface{} { return new(mapslice) },
 }
 
-// getMapslice returns a pooled mapslice with room for n elements.
-func getMapslice(n int) *mapslice {
-	s := mapslicePool.Get().(*mapslice) //nolint:errcheck
-	if cap(s.elements) < n {
-		s.elements = make([]element, 0, align(10, uintptr(n)))
-	}
-	return s
+// grow replaces the element buffer with one that has room for n elements.
+func (m *mapslice) grow(n int) {
+	m.elements = make([]element, 0, align(10, uintptr(n)))
 }
 
 // release clears the elements, so the pool holds no references, and
-// returns s to the pool.
+// returns m to the pool.
 func (m *mapslice) release() {
-	for i := range m.elements {
-		m.elements[i] = element{}
-	}
+	clear(m.elements)
 	m.elements = m.elements[:0]
 	mapslicePool.Put(m)
 }
@@ -707,7 +701,10 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 		return b, nil
 	}
 
-	s := getMapslice(len(m))
+	s := mapslicePool.Get().(*mapslice) //nolint:errcheck
+	if cap(s.elements) < len(m) {
+		s.grow(len(m))
+	}
 	for key, val := range m {
 		s.elements = append(s.elements, element{key: key, val: val})
 	}
@@ -800,7 +797,10 @@ func (e encoder) encodeMapStringInterfaceFast(b []byte, p unsafe.Pointer) ([]byt
 			n++
 		}
 	} else {
-		s := getMapslice(len(m))
+		s := mapslicePool.Get().(*mapslice) //nolint:errcheck
+		if cap(s.elements) < len(m) {
+			s.grow(len(m))
+		}
 		for key, v := range m {
 			s.elements = append(s.elements, element{key: key, val: v})
 		}
@@ -889,7 +889,10 @@ func (e encoder) encodeMapStringRawMessage(b []byte, p unsafe.Pointer) ([]byte, 
 		return b, nil
 	}
 
-	s := getMapslice(len(m))
+	s := mapslicePool.Get().(*mapslice) //nolint:errcheck
+	if cap(s.elements) < len(m) {
+		s.grow(len(m))
+	}
 	for key, raw := range m {
 		s.elements = append(s.elements, element{key: key, raw: raw})
 	}
@@ -964,7 +967,10 @@ func (e encoder) encodeMapStringRawMessageFast(b []byte, p unsafe.Pointer) ([]by
 			n++
 		}
 	} else {
-		s := getMapslice(len(m))
+		s := mapslicePool.Get().(*mapslice) //nolint:errcheck
+		if cap(s.elements) < len(m) {
+			s.grow(len(m))
+		}
 		for key, v := range m {
 			s.elements = append(s.elements, element{key: key, raw: v})
 		}
