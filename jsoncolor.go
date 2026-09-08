@@ -66,31 +66,20 @@ type Colors struct {
 	TextMarshaler Color
 }
 
-// appendReset appends the ANSI reset code to b if clr is non-empty. An
-// empty Color writes no prefix, so it must write no reset either; otherwise
-// a partially populated palette would leave a bare reset after every
-// uncolored token. See issue #54.
-func appendReset(b []byte, clr Color) []byte {
-	if len(clr) == 0 {
-		return b
-	}
-	return append(b, ansiReset...)
-}
-
 // appendNull appends a colorized "null" to b.
 func (c *Colors) appendNull(b []byte) []byte {
-	if c == nil {
+	if c == nil || len(c.Null) == 0 {
 		return append(b, "null"...)
 	}
 
 	b = append(b, c.Null...)
 	b = append(b, "null"...)
-	return appendReset(b, c.Null)
+	return append(b, ansiReset...)
 }
 
 // appendBool appends the colorized bool v to b.
 func (c *Colors) appendBool(b []byte, v bool) []byte {
-	if c == nil {
+	if c == nil || len(c.Bool) == 0 {
 		if v {
 			return append(b, "true"...)
 		}
@@ -105,29 +94,29 @@ func (c *Colors) appendBool(b []byte, v bool) []byte {
 		b = append(b, "false"...)
 	}
 
-	return appendReset(b, c.Bool)
+	return append(b, ansiReset...)
 }
 
 // appendInt64 appends the colorized int64 v to b.
 func (c *Colors) appendInt64(b []byte, v int64) []byte {
-	if c == nil {
+	if c == nil || len(c.Number) == 0 {
 		return strconv.AppendInt(b, v, 10)
 	}
 
 	b = append(b, c.Number...)
 	b = strconv.AppendInt(b, v, 10)
-	return appendReset(b, c.Number)
+	return append(b, ansiReset...)
 }
 
 // appendUint64 appends the colorized uint64 v to b.
 func (c *Colors) appendUint64(b []byte, v uint64) []byte {
-	if c == nil {
+	if c == nil || len(c.Number) == 0 {
 		return strconv.AppendUint(b, v, 10)
 	}
 
 	b = append(b, c.Number...)
 	b = strconv.AppendUint(b, v, 10)
-	return appendReset(b, c.Number)
+	return append(b, ansiReset...)
 }
 
 // appendPunc appends the colorized punctuation mark v to b. The color is
@@ -140,9 +129,13 @@ func (c *Colors) appendPunc(b []byte, v byte) []byte {
 	}
 
 	clr := c.puncColor(v)
+	if len(clr) == 0 {
+		return append(b, v)
+	}
+
 	b = append(b, clr...)
 	b = append(b, v)
-	return appendReset(b, clr)
+	return append(b, ansiReset...)
 }
 
 // puncColor returns the Color to use for punctuation mark v. It selects the
