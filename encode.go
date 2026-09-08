@@ -336,6 +336,13 @@ func (e encoder) encodeToString(b []byte, p unsafe.Pointer, encode encodeFunc) (
 }
 
 func (e encoder) encodeBytes(b []byte, p unsafe.Pointer) ([]byte, error) {
+	// A nil slice renders as null, which is a null token: color it with
+	// Null alone rather than nesting it inside the Bytes color. See
+	// issue #67.
+	if *(*[]byte)(p) == nil {
+		return e.clrs.appendNull(b), nil
+	}
+
 	if e.clrs == nil || len(e.clrs.Bytes) == 0 {
 		return e.doEncodeBytes(b, p)
 	}
@@ -1465,6 +1472,16 @@ type rawFrame struct {
 func (e encoder) appendRawMessageTokens(b, s []byte) ([]byte, error) {
 	start := len(b)
 
+	// A malformed message can end with container frames still pushed.
+	// Record the depth so the error return can restore it: when the
+	// message is trusted, encodeRawMessage swallows the error and emits the
+	// bytes verbatim, so the reset-on-error in appendInternal never runs.
+	// See issue #66.
+	var depth int
+	if e.indentr != nil {
+		depth = e.indentr.depth
+	}
+
 	stack := make([]rawFrame, 0, 8)
 
 	tok := NewTokenizer(s)
@@ -1514,8 +1531,18 @@ func (e encoder) appendRawMessageTokens(b, s []byte) ([]byte, error) {
 		}
 	}
 
-	if tok.Err != nil {
-		return b[:start], tok.Err
+	err := tok.Err
+	if err == nil && len(stack) > 0 {
+		// Input ended inside a container. The tokenizer reports no error
+		// for that, but the message is malformed all the same.
+		err = unexpectedEOF(s[len(s):])
+	}
+
+	if err != nil {
+		if e.indentr != nil {
+			e.indentr.depth = depth
+		}
+		return b[:start], err
 	}
 
 	return b, nil

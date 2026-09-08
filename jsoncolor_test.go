@@ -1115,3 +1115,60 @@ func TestEncode_DefaultColors_NoPuncReset(t *testing.T) {
 		require.NotContains(t, got, punc+reset, "bare reset after %q in %q", punc, got)
 	}
 }
+
+// rawMarshaler implements json.Marshaler with a caller-supplied payload, so
+// malformed output can be pushed through the Marshaler re-encoding path.
+type rawMarshaler struct{ raw string }
+
+func (m rawMarshaler) MarshalJSON() ([]byte, error) { return []byte(m.raw), nil }
+
+// TestEncode_TrustedMalformedRawMessage_NoDepthLeak verifies that a trusted
+// RawMessage which is not well-formed JSON, emitted verbatim per the
+// TrustRawMessage contract, does not leave the Encoder's indenter at a stale
+// depth for the next Encode.
+func TestEncode_TrustedMalformedRawMessage_NoDepthLeak(t *testing.T) {
+	malformed := []interface{}{
+		map[string]interface{}{"a": jsoncolor.RawMessage(`[1,2`), "b": 1},
+		map[string]interface{}{"a": jsoncolor.RawMessage(`{"x":[1,@]}`)},
+		jsoncolor.RawMessage(`{"k":{"n":[`),
+		[]interface{}{rawMarshaler{raw: `[[1,`}},
+	}
+
+	wantBuf := &bytes.Buffer{}
+	stdEnc := stdjson.NewEncoder(wantBuf)
+	stdEnc.SetIndent("", "  ")
+	require.NoError(t, stdEnc.Encode(map[string]int{"z": 1}))
+
+	for i, bad := range malformed {
+		t.Run(fmt.Sprintf("%d_%T", i, bad), func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			enc := jsoncolor.NewEncoder(buf)
+			enc.SetIndent("", "  ")
+			enc.SetTrustRawMessage(true)
+			require.NoError(t, enc.Encode(bad), "trusted messages are emitted without error")
+
+			buf.Reset()
+			require.NoError(t, enc.Encode(map[string]int{"z": 1}))
+			require.Equal(t, wantBuf.String(), buf.String())
+		})
+	}
+}
+
+// TestEncode_NilBytes_SingleColor verifies that a nil []byte is a single null
+// token colored by Colors.Null alone, and a non-nil []byte a single bytes
+// token colored by Colors.Bytes alone, with exactly one reset each.
+func TestEncode_NilBytes_SingleColor(t *testing.T) {
+	const reset = "\x1b[0m"
+	clrs := &jsoncolor.Colors{Bytes: jsoncolor.Color("B"), Null: jsoncolor.Color("N")}
+
+	buf := &bytes.Buffer{}
+	enc := jsoncolor.NewEncoder(buf)
+	enc.SetColors(clrs)
+
+	require.NoError(t, enc.Encode(struct{ B []byte }{}))
+	require.Equal(t, `{"B":Nnull`+reset+"}\n", buf.String())
+
+	buf.Reset()
+	require.NoError(t, enc.Encode(struct{ B []byte }{B: []byte("a")}))
+	require.Equal(t, `{"B":B"YQ=="`+reset+"}\n", buf.String())
+}
