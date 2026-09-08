@@ -465,4 +465,7 @@ var encoderBufferPool = sync.Pool{
 	New: func() interface{} { return &encoderBuffer{data: make([]byte, 0, 4096)} },
 }
 
+// encoderBuffer is the reusable output buffer that Marshal and Encoder.Encode
+// borrow from encoderBufferPool for the duration of one encode. Pooling a
+// wrapper rather than the slice itself avoids an allocation on Put.
 type encoderBuffer struct{ data []byte }

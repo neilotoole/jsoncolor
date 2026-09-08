@@ -616,12 +616,19 @@ func (e encoder) encodeMapFast(b []byte, p unsafe.Pointer, t reflect.Type, encod
 	return append(b, '}'), nil
 }
 
+// element is one member of a map being encoded with SortMapKeys: its key
+// and either its value, for map[string]interface{}, or its raw bytes, for
+// map[string]RawMessage.
 type element struct {
 	key string
 	val interface{}
 	raw RawMessage
 }
 
+// mapslice collects the members of a map so that they can be sorted by key
+// before encoding. It implements sort.Interface, and instances are pooled in
+// mapslicePool so the sorted encodings of string-keyed maps do not allocate
+// per call.
 type mapslice struct {
 	elements []element
 }

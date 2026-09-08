@@ -15,23 +15,43 @@ import (
 	"unsafe"
 )
 
+// codec is the pair of functions that encode and decode values of one Go
+// type. constructCodec builds one per type, composing the codecs of element,
+// key and field types, and the type-to-codec cache (see cacheLoad and
+// cacheStore) memoizes the result, so the reflect work happens once per type
+// rather than once per value.
 type codec struct {
 	encode encodeFunc
 	decode decodeFunc
 }
 
+// encoder carries the per-call state of an encode walk: the AppendFlags in
+// effect, the color palette, and the indenter. It is passed by value to
+// every encodeFunc. A nil clrs selects the colorless fast paths; a nil or
+// disabled indentr produces compact output.
 type encoder struct {
 	flags   AppendFlags
 	clrs    *Colors
 	indentr *Indenter
 }
+
+// decoder carries the per-call state of a decode walk, which is just the
+// ParseFlags in effect. It is passed by value to every decodeFunc.
 type decoder struct{ flags ParseFlags }
 
+// encodeFunc appends the JSON encoding of the value at p to b and returns
+// the extended buffer. decodeFunc parses a value from b into the memory at
+// p and returns the unconsumed remainder. In both, p addresses a value of
+// the Go type the function was constructed for; the caller guarantees the
+// type, so the functions read and write through p without checks.
 type (
 	encodeFunc func(encoder, []byte, unsafe.Pointer) ([]byte, error)
 	decodeFunc func(decoder, []byte, unsafe.Pointer) ([]byte, error)
 )
 
+// emptyFunc reports whether the value at p is empty for the purposes of the
+// omitempty tag; emptyFuncOf builds one per type. sortFunc orders a slice of
+// map keys in place for SortMapKeys; constructMapCodec picks one by key type.
 type (
 	emptyFunc func(unsafe.Pointer) bool
 	sortFunc  func([]reflect.Value)
@@ -511,13 +531,33 @@ func constructEmbeddedStructPointerDecodeFunc(t reflect.Type, unexported bool, o
 	}
 }
 
+// embeddedField is a candidate for promotion: one field of a struct that is
+// embedded, by value or by pointer, in the struct type being constructed.
+// appendStructFields collects these for every embedded struct, resolves
+// which of them encoding/json would promote, and copies the survivors into
+// the outer struct's field list as structField entries.
 type embeddedField struct {
-	index      int
-	offset     uintptr
-	pointer    bool
+	// index is the ordering key the promoted field will carry: the
+	// embedding field's index in the high 32 bits and the field's own index
+	// within the embedded struct in the low 32 bits.
+	index int
+
+	// offset is the byte offset of the embedding field from the address of
+	// the outer struct: the start of the embedded struct when embedded by
+	// value, or of the pointer word when embedded by pointer.
+	offset uintptr
+
+	// pointer reports that the struct is embedded by pointer.
+	pointer bool
+
+	// unexported reports that the embedding field is unexported. Decoding
+	// cannot allocate through such a pointer when it is nil.
 	unexported bool
-	subtype    *structType
-	subfield   *structField
+
+	// subtype is the embedded struct's own structType, and subfield the
+	// entry in it that is being considered for promotion.
+	subtype  *structType
+	subfield *structField
 }
 
 // promoteThroughPointer adapts a field promoted through an embedded struct
@@ -968,22 +1008,40 @@ func emptyFuncOf(t reflect.Type) emptyFunc {
 	return func(unsafe.Pointer) bool { return false }
 }
 
+// iface mirrors the runtime layout of an interface value, so that a codec
+// given the address of an interface can test it for nil without reflect.
 type iface struct {
 	typ unsafe.Pointer
 	ptr unsafe.Pointer
 }
 
+// slice mirrors the runtime layout of a slice header, so that a codec given
+// the address of a slice can read its length without reflect.
 type slice struct {
 	data unsafe.Pointer
 	len  int
 	cap  int
 }
 
+// structType is the cached description of a struct type that the struct
+// encoders and decoder walk. constructStructType builds it once per Go
+// type, including the fields promoted from embedded structs, and the codec
+// for the type closes over it.
 type structType struct {
-	fields      []structField
+	// fields lists the members to encode, in output order.
+	fields []structField
+
+	// fieldsIndex maps each JSON member name to its field, for the decoder's
+	// exact-match lookup.
 	fieldsIndex map[string]*structField
+
+	// ficaseIndex maps each lower-cased member name to the first field
+	// declared with it, for the decoder's case-insensitive fallback when an
+	// exact match fails, as encoding/json does.
 	ficaseIndex map[string]*structField
-	typ         reflect.Type
+
+	// typ is the Go struct type, used in error messages.
+	typ reflect.Type
 }
 
 // structField is the per-field entry in a structType. It is computed once
