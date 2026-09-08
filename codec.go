@@ -372,6 +372,20 @@ func constructMapCodec(t reflect.Type, seen map[reflect.Type]*structType) codec 
 	kc := codec{}
 	vc := constructCodec(v, seen, false)
 
+	// String-keyed maps of a few common value types get a specialized
+	// encoder that ranges over the map directly instead of going through
+	// reflect (see mapstring.go). Decoding still uses the generic path built
+	// below, so these cases fall through after setting the encoder.
+	var encode encodeFunc
+	switch {
+	case k == stringType && v == stringType:
+		encode = encoder.encodeMapStringString
+	case k == stringType && v == boolType:
+		encode = encoder.encodeMapStringBool
+	case k == stringType && v == stringsType:
+		encode = constructMapStringStringSliceEncodeFunc(vc.encode)
+	}
+
 	if k.Implements(textMarshalerType) || reflect.PointerTo(k).Implements(textUnmarshalerType) {
 		kc.encode = constructTextMarshalerEncodeFunc(k, false)
 		kc.decode = constructTextUnmarshalerDecodeFunc(k, true)
@@ -429,8 +443,12 @@ func constructMapCodec(t reflect.Type, seen map[reflect.Type]*structType) codec 
 		vc.encode = constructInlineValueEncodeFunc(vc.encode)
 	}
 
+	if encode == nil {
+		encode = constructMapEncodeFunc(t, kc.encode, vc.encode, sortKeys)
+	}
+
 	return codec{
-		encode: constructMapEncodeFunc(t, kc.encode, vc.encode, sortKeys),
+		encode: encode,
 		decode: constructMapDecodeFunc(t, kc.decode, vc.decode),
 	}
 }
@@ -730,6 +748,10 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 	for i := range fields {
 		fields[i].json = encodeString(fields[i].name, 0)
 		fields[i].html = encodeString(fields[i].name, EscapeHTML)
+		fields[i].keyPlain = "," + fields[i].json + ":"
+		fields[i].keyPlainHTML = "," + fields[i].html + ":"
+		fields[i].keyIndent = fields[i].json + ": "
+		fields[i].keyIndentHTML = fields[i].html + ": "
 	}
 
 	sort.Slice(fields, func(i, j int) bool { return fields[i].index < fields[j].index })
@@ -1084,9 +1106,21 @@ type structField struct {
 
 	// json and html are the field's key as it is written to the output:
 	// name quoted and escaped, without and with HTML escaping respectively.
-	// They are precomputed so the encoders append them as-is.
+	// They are precomputed so the encoders append them as-is. The colorized
+	// walk uses them directly, since it colors the key and the punctuation
+	// around it separately.
 	json string
 	html string
+
+	// keyPlain and keyPlainHTML are the key with the punctuation that the
+	// compact colorless encoder writes around it, `,"key":`, so a member's
+	// prefix is one append; the first member skips the leading comma.
+	// keyIndent and keyIndentHTML are the indented form, `"key": `, which
+	// follows the newline and indentation the encoder writes itself.
+	keyPlain      string
+	keyPlainHTML  string
+	keyIndent     string
+	keyIndentHTML string
 
 	// name is the JSON member name, from the json tag if present, otherwise
 	// the Go field name. The decoder looks fields up by it.
@@ -1210,6 +1244,7 @@ var (
 
 	numberType     = reflect.TypeOf(json.Number(""))
 	stringType     = reflect.TypeOf("")
+	stringsType    = reflect.TypeOf([]string(nil))
 	bytesType      = reflect.TypeOf(([]byte)(nil))
 	durationType   = reflect.TypeOf(time.Duration(0))
 	timeType       = reflect.TypeOf(time.Time{})

@@ -1,9 +1,5 @@
 package jsoncolor
 
-import (
-	"strconv"
-)
-
 // Colors specifies colorization of JSON output. Each field
 // is a Color, which is simply the bytes of the terminal color code.
 type Colors struct {
@@ -100,22 +96,22 @@ func (c *Colors) appendBool(b []byte, v bool) []byte {
 // appendInt64 appends the colorized int64 v to b.
 func (c *Colors) appendInt64(b []byte, v int64) []byte {
 	if c == nil || len(c.Number) == 0 {
-		return strconv.AppendInt(b, v, 10)
+		return appendInt(b, v)
 	}
 
 	b = append(b, c.Number...)
-	b = strconv.AppendInt(b, v, 10)
+	b = appendInt(b, v)
 	return append(b, ansiReset...)
 }
 
 // appendUint64 appends the colorized uint64 v to b.
 func (c *Colors) appendUint64(b []byte, v uint64) []byte {
 	if c == nil || len(c.Number) == 0 {
-		return strconv.AppendUint(b, v, 10)
+		return appendUint(b, v)
 	}
 
 	b = append(b, c.Number...)
-	b = strconv.AppendUint(b, v, 10)
+	b = appendUint(b, v)
 	return append(b, ansiReset...)
 }
 

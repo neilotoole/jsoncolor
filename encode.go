@@ -26,77 +26,77 @@ func (e encoder) encodeBool(b []byte, p unsafe.Pointer) ([]byte, error) {
 
 func (e encoder) encodeInt(b []byte, p unsafe.Pointer) ([]byte, error) {
 	if e.clrs == nil {
-		return strconv.AppendInt(b, int64(*(*int)(p)), 10), nil
+		return appendInt(b, int64(*(*int)(p))), nil
 	}
 	return e.clrs.appendInt64(b, int64(*(*int)(p))), nil
 }
 
 func (e encoder) encodeInt8(b []byte, p unsafe.Pointer) ([]byte, error) {
 	if e.clrs == nil {
-		return strconv.AppendInt(b, int64(*(*int8)(p)), 10), nil
+		return appendInt(b, int64(*(*int8)(p))), nil
 	}
 	return e.clrs.appendInt64(b, int64(*(*int8)(p))), nil
 }
 
 func (e encoder) encodeInt16(b []byte, p unsafe.Pointer) ([]byte, error) {
 	if e.clrs == nil {
-		return strconv.AppendInt(b, int64(*(*int16)(p)), 10), nil
+		return appendInt(b, int64(*(*int16)(p))), nil
 	}
 	return e.clrs.appendInt64(b, int64(*(*int16)(p))), nil
 }
 
 func (e encoder) encodeInt32(b []byte, p unsafe.Pointer) ([]byte, error) {
 	if e.clrs == nil {
-		return strconv.AppendInt(b, int64(*(*int32)(p)), 10), nil
+		return appendInt(b, int64(*(*int32)(p))), nil
 	}
 	return e.clrs.appendInt64(b, int64(*(*int32)(p))), nil
 }
 
 func (e encoder) encodeInt64(b []byte, p unsafe.Pointer) ([]byte, error) {
 	if e.clrs == nil {
-		return strconv.AppendInt(b, *(*int64)(p), 10), nil
+		return appendInt(b, *(*int64)(p)), nil
 	}
 	return e.clrs.appendInt64(b, *(*int64)(p)), nil
 }
 
 func (e encoder) encodeUint(b []byte, p unsafe.Pointer) ([]byte, error) {
 	if e.clrs == nil {
-		return strconv.AppendUint(b, uint64(*(*uint)(p)), 10), nil
+		return appendUint(b, uint64(*(*uint)(p))), nil
 	}
 	return e.clrs.appendUint64(b, uint64(*(*uint)(p))), nil
 }
 
 func (e encoder) encodeUintptr(b []byte, p unsafe.Pointer) ([]byte, error) {
 	if e.clrs == nil {
-		return strconv.AppendUint(b, uint64(*(*uintptr)(p)), 10), nil
+		return appendUint(b, uint64(*(*uintptr)(p))), nil
 	}
 	return e.clrs.appendUint64(b, uint64(*(*uintptr)(p))), nil
 }
 
 func (e encoder) encodeUint8(b []byte, p unsafe.Pointer) ([]byte, error) {
 	if e.clrs == nil {
-		return strconv.AppendUint(b, uint64(*(*uint8)(p)), 10), nil
+		return appendUint(b, uint64(*(*uint8)(p))), nil
 	}
 	return e.clrs.appendUint64(b, uint64(*(*uint8)(p))), nil
 }
 
 func (e encoder) encodeUint16(b []byte, p unsafe.Pointer) ([]byte, error) {
 	if e.clrs == nil {
-		return strconv.AppendUint(b, uint64(*(*uint16)(p)), 10), nil
+		return appendUint(b, uint64(*(*uint16)(p))), nil
 	}
 	return e.clrs.appendUint64(b, uint64(*(*uint16)(p))), nil
 }
 
 func (e encoder) encodeUint32(b []byte, p unsafe.Pointer) ([]byte, error) {
 	if e.clrs == nil {
-		return strconv.AppendUint(b, uint64(*(*uint32)(p)), 10), nil
+		return appendUint(b, uint64(*(*uint32)(p))), nil
 	}
 	return e.clrs.appendUint64(b, uint64(*(*uint32)(p))), nil
 }
 
 func (e encoder) encodeUint64(b []byte, p unsafe.Pointer) ([]byte, error) {
 	if e.clrs == nil {
-		return strconv.AppendUint(b, *(*uint64)(p), 10), nil
+		return appendUint(b, *(*uint64)(p)), nil
 	}
 	return e.clrs.appendUint64(b, *(*uint64)(p)), nil
 }
@@ -192,32 +192,62 @@ func (e encoder) encodeKey(b []byte, p unsafe.Pointer) ([]byte, error) {
 // Encoding a string cannot fail, so there is no error to return.
 func (e encoder) appendKey(b []byte, k string) []byte {
 	if e.clrs == nil || len(e.clrs.Key) == 0 {
-		return e.doEncodeString(b, unsafe.Pointer(&k))
+		e.clrs = nil
+		b, _ = e.encodeString(b, unsafe.Pointer(&k))
+		return b
 	}
 
 	b = append(b, e.clrs.Key...)
-	b = e.doEncodeString(b, unsafe.Pointer(&k))
+	e.clrs = nil
+	b, _ = e.encodeString(b, unsafe.Pointer(&k))
 	return append(b, ansiReset...)
 }
 
-func (e encoder) encodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
-	if e.clrs == nil || len(e.clrs.String) == 0 {
-		return e.doEncodeString(b, p), nil
-	}
-
-	b = append(b, e.clrs.String...)
-	b = e.doEncodeString(b, p)
-	b = append(b, ansiReset...)
-	return b, nil
+// doEncodeString appends the string at p, quoted and escaped, with no color.
+// It is encodeString with the palette masked off; callers that want a color
+// other than Colors.String, such as appendKey, wrap it themselves.
+func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) []byte {
+	e.clrs = nil
+	b, _ = e.encodeString(b, p)
+	return b
 }
 
-func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) []byte {
+// encodeString appends the string at p, quoted and escaped, colored by
+// Colors.String when set. The escape loop lives here rather than in a helper
+// so that string values, the most common leaf, reach it in a single call
+// from the codec; encoding a string cannot fail.
+func (e encoder) encodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 	s := *(*string)(p)
-	i := 0
-	j := 0
 	escapeHTML := (e.flags & EscapeHTML) != 0
 
+	var clr Color
+	if e.clrs != nil {
+		clr = e.clrs.String
+	}
+	if len(clr) != 0 {
+		b = append(b, clr...)
+	}
+
 	b = append(b, '"')
+
+	i := 0
+	j := 0
+
+	// Most strings contain nothing that needs escaping. Find the first byte
+	// that does, eight bytes at a time; when there is none, the whole string
+	// is appended in one copy. Otherwise the scalar loop below starts at that
+	// byte, with everything before it known to be clean. Strings shorter than
+	// one 8-byte word gain nothing from the scan and skip it.
+	if len(s) >= 8 {
+		if j = escapeIndex(s, escapeHTML); j < 0 {
+			b = append(b, s...)
+			b = append(b, '"')
+			if len(clr) != 0 {
+				b = append(b, ansiReset...)
+			}
+			return b, nil
+		}
+	}
 
 	for j < len(s) {
 		c := s[j]
@@ -253,6 +283,20 @@ func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) []byte {
 		case '\t':
 			b = append(b, s[i:j]...)
 			b = append(b, '\\', 't')
+			i = j + 1
+			j = i
+			continue
+
+		case '\b':
+			b = append(b, s[i:j]...)
+			b = append(b, '\\', 'b')
+			i = j + 1
+			j = i
+			continue
+
+		case '\f':
+			b = append(b, s[i:j]...)
+			b = append(b, '\\', 'f')
 			i = j + 1
 			j = i
 			continue
@@ -308,7 +352,10 @@ func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) []byte {
 
 	b = append(b, s[i:]...)
 	b = append(b, '"')
-	return b
+	if len(clr) != 0 {
+		b = append(b, ansiReset...)
+	}
+	return b, nil
 }
 
 func (e encoder) encodeToString(b []byte, p unsafe.Pointer, encode encodeFunc) ([]byte, error) {
@@ -376,7 +423,7 @@ func (e encoder) encodeDuration(b []byte, p unsafe.Pointer) ([]byte, error) {
 	//  We choose to follow the stdlib pattern, for fuller compatibility.
 
 	if e.clrs == nil {
-		return strconv.AppendInt(b, int64(*(*time.Duration)(p)), 10), nil
+		return appendInt(b, int64(*(*time.Duration)(p))), nil
 	}
 	b = e.clrs.appendInt64(b, int64(*(*time.Duration)(p)))
 	return b, nil
@@ -426,26 +473,33 @@ func (e encoder) encodeArray(b []byte, p unsafe.Pointer, n int, size uintptr, _ 
 
 	start := len(b)
 	var err error
+	ind := e.indentr.enabled() // decided once per container; see encodeStruct
 
 	b = e.clrs.appendPunc(b, '[')
 
 	if n > 0 {
-		e.indentr.push()
+		if ind {
+			e.indentr.depth++
+		}
 		for i := 0; i < n; i++ {
 			if i != 0 {
 				b = e.clrs.appendPunc(b, ',')
 			}
 
-			b = e.indentr.appendByte(b, '\n')
-			b = e.indentr.appendIndent(b)
+			if ind {
+				b = append(b, '\n')
+				b = e.indentr.appendIndentFast(b)
+			}
 
 			if b, err = encode(e, b, unsafe.Pointer(uintptr(p)+(uintptr(i)*size))); err != nil {
 				return b[:start], err
 			}
 		}
-		e.indentr.pop()
-		b = e.indentr.appendByte(b, '\n')
-		b = e.indentr.appendIndent(b)
+		if ind {
+			e.indentr.depth--
+			b = append(b, '\n')
+			b = e.indentr.appendIndentFast(b)
+		}
 	}
 
 	b = e.clrs.appendPunc(b, ']')
@@ -665,6 +719,7 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 	}
 
 	start := len(b)
+	ind := e.indentr.enabled() // decided once per container; see encodeStruct
 
 	if (e.flags & SortMapKeys) == 0 {
 		// Optimized code path when the program does not need the map keys to be
@@ -672,24 +727,18 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 		b = e.clrs.appendPunc(b, '{')
 
 		if len(m) != 0 {
-			b = e.indentr.appendByte(b, '\n')
-
 			var err error
 			i := 0
 
-			e.indentr.push()
+			if ind {
+				e.indentr.depth++
+			}
 			for k, v := range m {
 				if i != 0 {
 					b = e.clrs.appendPunc(b, ',')
-					b = e.indentr.appendByte(b, '\n')
 				}
 
-				b = e.indentr.appendIndent(b)
-
-				b = e.appendKey(b, k)
-
-				b = e.clrs.appendPunc(b, ':')
-				b = e.indentr.appendByte(b, ' ')
+				b = e.appendColoredMember(b, ind, k)
 
 				b, err = Append(b, v, e.flags, e.clrs, e.indentr)
 				if err != nil {
@@ -698,9 +747,11 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 
 				i++
 			}
-			b = e.indentr.appendByte(b, '\n')
-			e.indentr.pop()
-			b = e.indentr.appendIndent(b)
+			if ind {
+				e.indentr.depth--
+				b = append(b, '\n')
+				b = e.indentr.appendIndentFast(b)
+			}
 		}
 
 		b = e.clrs.appendPunc(b, '}')
@@ -720,30 +771,27 @@ func (e encoder) encodeMapStringInterface(b []byte, p unsafe.Pointer) ([]byte, e
 	b = e.clrs.appendPunc(b, '{')
 
 	if len(s.elements) > 0 {
-		b = e.indentr.appendByte(b, '\n')
-
-		e.indentr.push()
+		if ind {
+			e.indentr.depth++
+		}
 		for i := range s.elements {
 			elem := s.elements[i]
 			if i != 0 {
 				b = e.clrs.appendPunc(b, ',')
-				b = e.indentr.appendByte(b, '\n')
 			}
 
-			b = e.indentr.appendIndent(b)
-
-			b = e.appendKey(b, elem.key)
-			b = e.clrs.appendPunc(b, ':')
-			b = e.indentr.appendByte(b, ' ')
+			b = e.appendColoredMember(b, ind, elem.key)
 
 			b, err = Append(b, elem.val, e.flags, e.clrs, e.indentr)
 			if err != nil {
 				break
 			}
 		}
-		b = e.indentr.appendByte(b, '\n')
-		e.indentr.pop()
-		b = e.indentr.appendIndent(b)
+		if ind {
+			e.indentr.depth--
+			b = append(b, '\n')
+			b = e.indentr.appendIndentFast(b)
+		}
 	}
 
 	s.release()
@@ -767,8 +815,25 @@ func (e encoder) appendFastMember(b []byte, i int, ind bool, key string) []byte 
 		b = append(b, '\n')
 		b = e.indentr.appendIndentFast(b)
 	}
-	b = e.appendKey(b, key)
+	// e.clrs is nil on this path, so encodeString writes the bare key.
+	b, _ = e.encodeString(b, unsafe.Pointer(&key))
 	b = append(b, ':')
+	if ind {
+		b = append(b, ' ')
+	}
+	return b
+}
+
+// appendColoredMember writes the newline and indentation (when ind is set)
+// and the colored key and colon that precede a map member on the colorized
+// walk. The separating comma is written by the caller.
+func (e encoder) appendColoredMember(b []byte, ind bool, key string) []byte {
+	if ind {
+		b = append(b, '\n')
+		b = e.indentr.appendIndentFast(b)
+	}
+	b = e.appendKey(b, key)
+	b = e.clrs.appendPunc(b, ':')
 	if ind {
 		b = append(b, ' ')
 	}
@@ -1020,10 +1085,18 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 	var k string
 	var n int
 	start := len(b)
+	escapeHTML := (e.flags & EscapeHTML) != 0
+
+	// Indentation is decided once per container, as the colorless fast
+	// paths do, rather than through the nil-checked Indenter helpers on
+	// every token.
+	ind := e.indentr.enabled()
 
 	b = e.clrs.appendPunc(b, '{')
 
-	e.indentr.push()
+	if ind {
+		e.indentr.depth++
+	}
 
 	for i := range st.fields {
 		f := &st.fields[i]
@@ -1052,17 +1125,18 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 			b = e.clrs.appendPunc(b, ',')
 		}
 
-		b = e.indentr.appendByte(b, '\n')
-
-		if (e.flags & EscapeHTML) != 0 {
+		if escapeHTML {
 			k = f.html
 		} else {
 			k = f.json
 		}
 
-		b = e.indentr.appendIndent(b)
+		if ind {
+			b = append(b, '\n')
+			b = e.indentr.appendIndentFast(b)
+		}
 
-		if e.clrs == nil || len(e.clrs.Key) == 0 {
+		if len(e.clrs.Key) == 0 {
 			b = append(b, k...)
 		} else {
 			b = append(b, e.clrs.Key...)
@@ -1072,7 +1146,9 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 
 		b = e.clrs.appendPunc(b, ':')
 
-		b = e.indentr.appendByte(b, ' ')
+		if ind {
+			b = append(b, ' ')
+		}
 
 		if b, err = f.codec.encode(e, b, v); err != nil {
 			return b[:start], err
@@ -1081,11 +1157,12 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 		n++
 	}
 
-	e.indentr.pop()
-
-	if n > 0 {
-		b = e.indentr.appendByte(b, '\n')
-		b = e.indentr.appendIndent(b)
+	if ind {
+		e.indentr.depth--
+		if n > 0 {
+			b = append(b, '\n')
+			b = e.indentr.appendIndentFast(b)
+		}
 	}
 
 	b = e.clrs.appendPunc(b, '}')
@@ -1096,6 +1173,7 @@ func (e encoder) encodeStructPlain(b []byte, p unsafe.Pointer, st *structType) (
 	var k string
 	var n int
 	start := len(b)
+	escapeHTML := (e.flags & EscapeHTML) != 0
 
 	b = append(b, '{')
 
@@ -1118,18 +1196,18 @@ func (e encoder) encodeStructPlain(b []byte, p unsafe.Pointer, st *structType) (
 			}
 		}
 
-		if n != 0 {
-			b = append(b, ',')
-		}
-
-		if (e.flags & EscapeHTML) != 0 {
-			k = f.html
+		if escapeHTML {
+			k = f.keyPlainHTML
 		} else {
-			k = f.json
+			k = f.keyPlain
 		}
 
-		b = append(b, k...)
-		b = append(b, ':')
+		// k carries the separating comma; the first member drops it.
+		if n != 0 {
+			b = append(b, k...)
+		} else {
+			b = append(b, k[1:]...)
+		}
 
 		var err error
 		if b, err = f.codec.encode(e, b, v); err != nil {
@@ -1146,6 +1224,7 @@ func (e encoder) encodeStructIndented(b []byte, p unsafe.Pointer, st *structType
 	var k string
 	var n int
 	start := len(b)
+	escapeHTML := (e.flags & EscapeHTML) != 0
 
 	b = append(b, '{')
 
@@ -1176,15 +1255,14 @@ func (e encoder) encodeStructIndented(b []byte, p unsafe.Pointer, st *structType
 
 		b = append(b, '\n')
 
-		if (e.flags & EscapeHTML) != 0 {
-			k = f.html
+		if escapeHTML {
+			k = f.keyIndentHTML
 		} else {
-			k = f.json
+			k = f.keyIndent
 		}
 
 		b = e.indentr.appendIndentFast(b)
 		b = append(b, k...)
-		b = append(b, ':', ' ')
 
 		var err error
 		if b, err = f.codec.encode(e, b, v); err != nil {
