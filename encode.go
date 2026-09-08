@@ -1472,6 +1472,16 @@ type rawFrame struct {
 func (e encoder) appendRawMessageTokens(b, s []byte) ([]byte, error) {
 	start := len(b)
 
+	// A malformed message can end with container frames still pushed.
+	// Record the depth so the error return can restore it: when the
+	// message is trusted, encodeRawMessage swallows the error and emits the
+	// bytes verbatim, so the reset-on-error in appendInternal never runs.
+	// See issue #66.
+	var depth int
+	if e.indentr != nil {
+		depth = e.indentr.depth
+	}
+
 	stack := make([]rawFrame, 0, 8)
 
 	tok := NewTokenizer(s)
@@ -1521,8 +1531,18 @@ func (e encoder) appendRawMessageTokens(b, s []byte) ([]byte, error) {
 		}
 	}
 
-	if tok.Err != nil {
-		return b[:start], tok.Err
+	err := tok.Err
+	if err == nil && len(stack) > 0 {
+		// Input ended inside a container. The tokenizer reports no error
+		// for that, but the message is malformed all the same.
+		err = syntaxError(s[len(s):], "unexpected end of JSON input")
+	}
+
+	if err != nil {
+		if e.indentr != nil {
+			e.indentr.depth = depth
+		}
+		return b[:start], err
 	}
 
 	return b, nil
