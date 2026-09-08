@@ -200,20 +200,30 @@ func (e encoder) appendKey(b []byte, k string) []byte {
 	return append(b, ansiReset...)
 }
 
-func (e encoder) encodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
-	if e.clrs == nil || len(e.clrs.String) == 0 {
-		return e.doEncodeString(b, p), nil
-	}
-
-	b = append(b, e.clrs.String...)
-	b = e.doEncodeString(b, p)
-	b = append(b, ansiReset...)
-	return b, nil
+// doEncodeString appends the string at p, quoted and escaped, with no color.
+// It is encodeString with the palette masked off; callers that want a color
+// other than Colors.String, such as appendKey, wrap it themselves.
+func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) []byte {
+	e.clrs = nil
+	b, _ = e.encodeString(b, p)
+	return b
 }
 
-func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) []byte {
+// encodeString appends the string at p, quoted and escaped, colored by
+// Colors.String when set. The escape loop lives here rather than in a helper
+// so that string values, the most common leaf, reach it in a single call
+// from the codec; encoding a string cannot fail.
+func (e encoder) encodeString(b []byte, p unsafe.Pointer) ([]byte, error) {
 	s := *(*string)(p)
 	escapeHTML := (e.flags & EscapeHTML) != 0
+
+	var clr Color
+	if e.clrs != nil {
+		clr = e.clrs.String
+	}
+	if len(clr) != 0 {
+		b = append(b, clr...)
+	}
 
 	b = append(b, '"')
 
@@ -228,7 +238,11 @@ func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) []byte {
 	if len(s) >= 8 {
 		if j = escapeIndex(s, escapeHTML); j < 0 {
 			b = append(b, s...)
-			return append(b, '"')
+			b = append(b, '"')
+			if len(clr) != 0 {
+				b = append(b, ansiReset...)
+			}
+			return b, nil
 		}
 	}
 
@@ -335,7 +349,10 @@ func (e encoder) doEncodeString(b []byte, p unsafe.Pointer) []byte {
 
 	b = append(b, s[i:]...)
 	b = append(b, '"')
-	return b
+	if len(clr) != 0 {
+		b = append(b, ansiReset...)
+	}
+	return b, nil
 }
 
 func (e encoder) encodeToString(b []byte, p unsafe.Pointer, encode encodeFunc) ([]byte, error) {
