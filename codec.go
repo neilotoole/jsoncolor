@@ -24,6 +24,11 @@ type encoder struct {
 	flags   AppendFlags
 	clrs    *Colors
 	indentr *Indenter
+	// forceSlow disables encode-time fast paths so the colorless walk
+	// matches the colorized walk byte-for-byte. It exists for parity
+	// testing only and is never set in production paths; see
+	// appendInternal in json.go.
+	forceSlow bool
 }
 type decoder struct{ flags ParseFlags }
 
@@ -527,6 +532,20 @@ type embeddedField struct {
 	subfield   *structField
 }
 
+// promoteThroughPointer adapts a field promoted through an embedded struct
+// pointer. The codec, and for omitempty fields the emptiness check, are
+// wrapped to dereference the pointer, and the offset is re-pointed at the
+// pointer word in the outer struct. Non-omitempty fields never consult the
+// emptiness check, so they skip that wrapper.
+func promoteThroughPointer(embfield embeddedField, subfield structField) structField {
+	subfield.codec = constructEmbeddedStructPointerCodec(embfield.subtype.typ, embfield.unexported, subfield.offset, subfield.codec)
+	if subfield.omitempty {
+		subfield.empty = constructEmbeddedStructPointerEmptyFunc(subfield.offset, subfield.empty)
+	}
+	subfield.offset = embfield.offset
+	return subfield
+}
+
 func appendStructFields(fields []structField, t reflect.Type, offset uintptr, seen map[reflect.Type]*structType, canAddr bool) []structField {
 	names := make(map[string]struct{})
 	embedded := make([]embeddedField, 0, 10)
@@ -636,9 +655,7 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 		}
 
 		if embfield.pointer {
-			subfield.codec = constructEmbeddedStructPointerCodec(embfield.subtype.typ, embfield.unexported, subfield.offset, subfield.codec)
-			subfield.empty = constructEmbeddedStructPointerEmptyFunc(subfield.offset, subfield.empty)
-			subfield.offset = embfield.offset
+			subfield = promoteThroughPointer(embfield, subfield)
 		} else {
 			subfield.offset += embfield.offset
 		}
