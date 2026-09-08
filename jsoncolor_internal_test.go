@@ -74,13 +74,17 @@ var parityExtraValues = []interface{}{
 	[]interface{}{1, parityFuncField{}},
 }
 
+// slowColors is an empty, non-nil palette. The encoder takes the fast
+// paths only when clrs is nil, so passing slowColors routes the same
+// colorless encode through the general walk; since every Color is empty,
+// no ANSI escapes are written and the output must be byte-identical.
+var slowColors = &Colors{}
+
 // TestEncode_FastPathParity asserts that the colorless fast paths
 // produce byte-identical output to the general (slow) walk for every
-// value in testValues. Append (the public entry point) takes the fast
-// path when clrs is nil; appendInternal with forceSlow=true routes the
-// same colorless encode through the general walk instead. Neither side
-// emits color. The two outputs must be equal, otherwise the fast path
-// has diverged.
+// value in testValues. Append takes the fast path when clrs is nil;
+// slowColors forces the general walk. Neither side emits color. The two
+// outputs must be equal, otherwise the fast path has diverged.
 //
 // SortMapKeys is included in every config because map iteration is
 // otherwise nondeterministic across the two calls — without sorting,
@@ -118,7 +122,7 @@ func TestEncode_FastPathParity(t *testing.T) {
 					}
 
 					fast, fastErr := Append(nil, v, cfg.flags, nil, fastIndentr)
-					slow, slowErr := appendInternal(nil, v, cfg.flags, nil, slowIndentr, true)
+					slow, slowErr := Append(nil, v, cfg.flags, slowColors, slowIndentr)
 
 					if (fastErr == nil) != (slowErr == nil) {
 						t.Fatalf("error mismatch: fast=%v slow=%v", fastErr, slowErr)
@@ -160,8 +164,8 @@ type benchMixedRecord struct {
 // BenchmarkFastVsSlow compares the colorless fast path against the
 // general (slow) walk on identical data, with the output buffer pre-sized so
 // growth is not measured. The only variable is whether the fast path is
-// taken: fast=Append (forceSlow=false), slow=appendInternal with
-// forceSlow=true. Any nonzero delta is the fast path's contribution.
+// taken: fast=Append with nil colors, slow=Append with slowColors. Any
+// nonzero delta is the fast path's contribution.
 func BenchmarkFastVsSlow(b *testing.B) {
 	rec := benchMixedRecord{
 		I: 1, I64: 2, F32: 2.71, F64: 3.14,
@@ -196,7 +200,7 @@ func BenchmarkFastVsSlow(b *testing.B) {
 				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
-					buf, _ = appendInternal(buf[:0], rec, EscapeHTML|SortMapKeys, nil, indentr, true)
+					buf, _ = Append(buf[:0], rec, EscapeHTML|SortMapKeys, slowColors, indentr)
 				}
 			})
 		})
@@ -224,7 +228,7 @@ func TestEncode_UnsortedMapErrorRollsBack(t *testing.T) {
 				prefix := []byte("prefix")
 
 				fast, fastErr := Append(append([]byte(nil), prefix...), v, 0, nil, indentr)
-				slow, slowErr := appendInternal(append([]byte(nil), prefix...), v, 0, nil, indentr, true)
+				slow, slowErr := Append(append([]byte(nil), prefix...), v, 0, slowColors, indentr)
 
 				if (fastErr == nil) != (slowErr == nil) {
 					t.Fatalf("error mismatch: fast=%v slow=%v", fastErr, slowErr)

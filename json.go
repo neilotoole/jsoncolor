@@ -120,13 +120,6 @@ const (
 // construct an [Indenter] via [NewIndenter] to indent the output. The clrs
 // argument may be nil to disable colorization.
 func Append(b []byte, x interface{}, flags AppendFlags, clrs *Colors, indentr *Indenter) ([]byte, error) {
-	return appendInternal(b, x, flags, clrs, indentr, false)
-}
-
-// appendInternal is the shared implementation for Append. It carries
-// forceSlow through the recursion so parity tests can disable encode-time
-// fast paths and compare them against the colorized walk.
-func appendInternal(b []byte, x interface{}, flags AppendFlags, clrs *Colors, indentr *Indenter, forceSlow bool) ([]byte, error) {
 	if x == nil {
 		// Special case for nil values because it makes the rest of the code
 		// simpler to assume that it won't be seeing nil pointers.
@@ -143,7 +136,7 @@ func appendInternal(b []byte, x interface{}, flags AppendFlags, clrs *Colors, in
 		c = constructCachedCodec(t, cache)
 	}
 
-	b, err := c.encode(encoder{flags: flags, clrs: clrs, indentr: indentr, forceSlow: forceSlow}, b, p)
+	b, err := c.encode(encoder{flags: flags, clrs: clrs, indentr: indentr}, b, p)
 	if err != nil && indentr != nil {
 		// A failed encode can return from inside a push/pop pair, leaving
 		// the Indenter at a stale depth that would poison later calls, since

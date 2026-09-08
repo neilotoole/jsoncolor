@@ -24,11 +24,6 @@ type encoder struct {
 	flags   AppendFlags
 	clrs    *Colors
 	indentr *Indenter
-	// forceSlow disables encode-time fast paths so the colorless walk
-	// matches the colorized walk byte-for-byte. It exists for parity
-	// testing only and is never set in production paths; see
-	// appendInternal in json.go.
-	forceSlow bool
 }
 type decoder struct{ flags ParseFlags }
 
