@@ -1,5 +1,7 @@
 package jsoncolor
 
+import "encoding/binary"
+
 // Integer formatting. strconv.AppendInt is general over bases and carries a
 // 65-byte scratch buffer; JSON only ever needs base 10 and at most 20 digits,
 // so a dedicated formatter that writes two digits per step from a lookup
@@ -20,6 +22,15 @@ const digitPairs = "" +
 	"80818283848586878889" +
 	"90919293949596979899"
 
+// digitPairs16 holds the same pairs as 16-bit words in the machine's byte
+// order, so that a pair is written with one 16-bit store.
+var digitPairs16 = func() (t [100]uint16) {
+	for i := range t {
+		t[i] = binary.NativeEndian.Uint16([]byte(digitPairs[2*i : 2*i+2]))
+	}
+	return t
+}()
+
 // appendInt appends the decimal representation of n to b.
 func appendInt(b []byte, n int64) []byte {
 	u := uint64(n) //nolint:gosec // two's-complement reinterpretation is intended
@@ -39,25 +50,21 @@ func appendUint(b []byte, u uint64) []byte {
 		return append(b, digitPairs[2*u], digitPairs[2*u+1])
 	}
 
-	// Fill a scratch buffer from the right, two digits at a time. A uint64
-	// has at most 20 decimal digits.
+	// Fill a scratch buffer from the right, two digits per step. A uint64
+	// has at most 20 decimal digits. The last step always writes a pair; a
+	// leading zero is then skipped rather than branched around.
 	var buf [20]byte
 	i := len(buf)
 	for u >= 100 {
 		q := u / 100
-		j := 2 * (u - q*100)
 		i -= 2
-		buf[i] = digitPairs[j]
-		buf[i+1] = digitPairs[j+1]
+		binary.NativeEndian.PutUint16(buf[i:], digitPairs16[u-q*100])
 		u = q
 	}
-	if u >= 10 {
-		i -= 2
-		buf[i] = digitPairs[2*u]
-		buf[i+1] = digitPairs[2*u+1]
-	} else {
-		i--
-		buf[i] = byte('0' + u)
+	i -= 2
+	binary.NativeEndian.PutUint16(buf[i:], digitPairs16[u])
+	if u < 10 {
+		i++
 	}
 	return append(b, buf[i:]...)
 }
