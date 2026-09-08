@@ -192,11 +192,14 @@ func (e encoder) encodeKey(b []byte, p unsafe.Pointer) ([]byte, error) {
 // Encoding a string cannot fail, so there is no error to return.
 func (e encoder) appendKey(b []byte, k string) []byte {
 	if e.clrs == nil || len(e.clrs.Key) == 0 {
-		return e.doEncodeString(b, unsafe.Pointer(&k))
+		e.clrs = nil
+		b, _ = e.encodeString(b, unsafe.Pointer(&k))
+		return b
 	}
 
 	b = append(b, e.clrs.Key...)
-	b = e.doEncodeString(b, unsafe.Pointer(&k))
+	e.clrs = nil
+	b, _ = e.encodeString(b, unsafe.Pointer(&k))
 	return append(b, ansiReset...)
 }
 
@@ -811,7 +814,8 @@ func (e encoder) appendFastMember(b []byte, i int, ind bool, key string) []byte 
 		b = append(b, '\n')
 		b = e.indentr.appendIndentFast(b)
 	}
-	b = e.appendKey(b, key)
+	// e.clrs is nil on this path, so encodeString writes the bare key.
+	b, _ = e.encodeString(b, unsafe.Pointer(&key))
 	b = append(b, ':')
 	if ind {
 		b = append(b, ' ')
