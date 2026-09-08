@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding"
 	"encoding/base64"
-	"errors"
 	"math"
 	"reflect"
 	"sort"
@@ -617,12 +616,19 @@ func (e encoder) encodeMapFast(b []byte, p unsafe.Pointer, t reflect.Type, encod
 	return append(b, '}'), nil
 }
 
+// element is one member of a map being encoded with SortMapKeys: its key
+// and either its value, for map[string]interface{}, or its raw bytes, for
+// map[string]RawMessage.
 type element struct {
 	key string
 	val interface{}
 	raw RawMessage
 }
 
+// mapslice collects the members of a map so that they can be sorted by key
+// before encoding. It implements sort.Interface, and instances are pooled in
+// mapslicePool so the sorted encodings of string-keyed maps do not allocate
+// per call.
 type mapslice struct {
 	elements []element
 }
@@ -1023,14 +1029,24 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 		f := &st.fields[i]
 		v := unsafe.Pointer(uintptr(p) + f.offset)
 
-		if f.omitempty && f.empty(v) {
-			continue
-		}
+		if f.flags != 0 {
+			if f.flags&fieldOmitEmpty != 0 && f.empty(v) {
+				continue
+			}
 
-		// fieldStart is the rollback point: everything appended for this
-		// field, including its separator, is discarded if the field's codec
-		// returns rollback (e.g. a nil embedded struct pointer). See #56.
-		fieldStart := len(b)
+			// A field promoted through an embedded struct pointer is omitted
+			// when the pointer is nil, as encoding/json does, and is otherwise
+			// encoded at its offset from the pointer's target. The nil check
+			// runs before anything is written for the field, so there is
+			// nothing to undo. See issues #56 and #70.
+			if f.flags&fieldViaPointer != 0 {
+				q := *(*unsafe.Pointer)(v)
+				if q == nil {
+					continue
+				}
+				v = unsafe.Pointer(uintptr(q) + f.ptrOffset)
+			}
+		}
 
 		if n != 0 {
 			b = e.clrs.appendPunc(b, ',')
@@ -1059,10 +1075,6 @@ func (e encoder) encodeStruct(b []byte, p unsafe.Pointer, st *structType) ([]byt
 		b = e.indentr.appendByte(b, ' ')
 
 		if b, err = f.codec.encode(e, b, v); err != nil {
-			if errors.Is(err, rollback{}) {
-				b = b[:fieldStart]
-				continue
-			}
 			return b[:start], err
 		}
 
@@ -1091,12 +1103,20 @@ func (e encoder) encodeStructPlain(b []byte, p unsafe.Pointer, st *structType) (
 		f := &st.fields[i]
 		v := unsafe.Pointer(uintptr(p) + f.offset)
 
-		if f.omitempty && f.empty(v) {
-			continue
-		}
+		if f.flags != 0 {
+			if f.flags&fieldOmitEmpty != 0 && f.empty(v) {
+				continue
+			}
 
-		// fieldStart is the rollback point; see encodeStruct.
-		fieldStart := len(b)
+			// Promoted through an embedded struct pointer; see encodeStruct.
+			if f.flags&fieldViaPointer != 0 {
+				q := *(*unsafe.Pointer)(v)
+				if q == nil {
+					continue
+				}
+				v = unsafe.Pointer(uintptr(q) + f.ptrOffset)
+			}
+		}
 
 		if n != 0 {
 			b = append(b, ',')
@@ -1113,10 +1133,6 @@ func (e encoder) encodeStructPlain(b []byte, p unsafe.Pointer, st *structType) (
 
 		var err error
 		if b, err = f.codec.encode(e, b, v); err != nil {
-			if errors.Is(err, rollback{}) {
-				b = b[:fieldStart]
-				continue
-			}
 			return b[:start], err
 		}
 
@@ -1139,12 +1155,20 @@ func (e encoder) encodeStructIndented(b []byte, p unsafe.Pointer, st *structType
 		f := &st.fields[i]
 		v := unsafe.Pointer(uintptr(p) + f.offset)
 
-		if f.omitempty && f.empty(v) {
-			continue
-		}
+		if f.flags != 0 {
+			if f.flags&fieldOmitEmpty != 0 && f.empty(v) {
+				continue
+			}
 
-		// fieldStart is the rollback point; see encodeStruct.
-		fieldStart := len(b)
+			// Promoted through an embedded struct pointer; see encodeStruct.
+			if f.flags&fieldViaPointer != 0 {
+				q := *(*unsafe.Pointer)(v)
+				if q == nil {
+					continue
+				}
+				v = unsafe.Pointer(uintptr(q) + f.ptrOffset)
+			}
+		}
 
 		if n != 0 {
 			b = append(b, ',')
@@ -1164,10 +1188,6 @@ func (e encoder) encodeStructIndented(b []byte, p unsafe.Pointer, st *structType
 
 		var err error
 		if b, err = f.codec.encode(e, b, v); err != nil {
-			if errors.Is(err, rollback{}) {
-				b = b[:fieldStart]
-				continue
-			}
 			return b[:start], err
 		}
 
@@ -1184,14 +1204,17 @@ func (e encoder) encodeStructIndented(b []byte, p unsafe.Pointer, st *structType
 	return append(b, '}'), nil
 }
 
-type rollback struct{}
-
-func (rollback) Error() string { return "rollback" }
-
+// encodeEmbeddedStructPointer encodes a field promoted through the second or
+// deeper level of a chain of embedded struct pointers: p addresses an inner
+// pointer word, which is dereferenced here. The outermost pointer is handled
+// by the struct encoders (see fieldViaPointer), and a nil inner
+// pointer is caught by the field's synthesized omitempty check before the
+// codec is called, so p is non-nil here in practice. Should a nil pointer
+// arrive anyway, it encodes as null, which keeps the output well-formed.
 func (e encoder) encodeEmbeddedStructPointer(b []byte, p unsafe.Pointer, _ reflect.Type, _ bool, offset uintptr, encode encodeFunc) ([]byte, error) {
 	p = *(*unsafe.Pointer)(p)
 	if p == nil {
-		return b, rollback{}
+		return e.clrs.appendNull(b), nil
 	}
 	return encode(e, b, unsafe.Pointer(uintptr(p)+offset))
 }

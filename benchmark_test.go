@@ -182,3 +182,79 @@ func newEncNwidger(w io.Writer, indent, color bool) encoder {
 
 	return enc
 }
+
+// embedPtrInner is embedded by pointer in embedPtrOuter. Its fields are
+// promoted through the pointer, so each one pays the promotion overhead on
+// every encode; the type has enough of them that that overhead dominates.
+type embedPtrInner struct {
+	F0 int
+	F1 int
+	F2 int
+	F3 int
+	F4 int
+	F5 int
+	F6 int
+	F7 int
+}
+
+type embedPtrOuter struct {
+	A int
+	*embedPtrInner
+	C int
+}
+
+// embedPtrFlat has the same fields as embedPtrOuter, declared directly. It is
+// the control: the struct encoder's per-field checks run on every field, so
+// a change to those checks shows up here even without an embedded pointer.
+type embedPtrFlat struct {
+	A  int
+	F0 int
+	F1 int
+	F2 int
+	F3 int
+	F4 int
+	F5 int
+	F6 int
+	F7 int
+	C  int
+}
+
+// BenchmarkEncode_EmbeddedPointer measures the struct encoder on fields
+// promoted through an embedded struct pointer, with the pointer set and nil,
+// against a flat struct with the same fields. See issue #70.
+func BenchmarkEncode_EmbeddedPointer(b *testing.B) {
+	values := []struct {
+		name string
+		v    interface{}
+	}{
+		{name: "nonnil", v: embedPtrOuter{A: 1, embedPtrInner: &embedPtrInner{1, 2, 3, 4, 5, 6, 7, 8}, C: 2}},
+		{name: "nil", v: embedPtrOuter{A: 1, C: 2}},
+		{name: "flat", v: embedPtrFlat{1, 1, 2, 3, 4, 5, 6, 7, 8, 2}},
+	}
+
+	palettes := []struct {
+		name string
+		clrs *jsoncolor.Colors
+	}{
+		{name: "nocolor", clrs: nil},
+		{name: "color", clrs: jsoncolor.DefaultColors()},
+	}
+
+	for _, pal := range palettes {
+		for _, val := range values {
+			b.Run(pal.name+"/"+val.name, func(b *testing.B) {
+				buf := &bytes.Buffer{}
+				enc := jsoncolor.NewEncoder(buf)
+				enc.SetColors(pal.clrs)
+				b.ReportAllocs()
+				b.ResetTimer()
+				for n := 0; n < b.N; n++ {
+					buf.Reset()
+					if err := enc.Encode(val.v); err != nil {
+						b.Fatal(err)
+					}
+				}
+			})
+		}
+	}
+}

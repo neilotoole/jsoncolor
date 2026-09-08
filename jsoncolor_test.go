@@ -786,7 +786,7 @@ func TestAppendIndenter(t *testing.T) {
 }
 
 // nilEmbedInner is embedded by pointer in the structs below. When the pointer
-// is nil, the encoder must roll back the promoted field cleanly.
+// is nil, the encoder must omit the promoted field cleanly.
 type nilEmbedInner struct {
 	X int
 }
@@ -813,12 +813,32 @@ type nilEmbedLast struct {
 	*nilEmbedInner
 }
 
+type nilEmbedL1 struct {
+	*nilEmbedInner
+}
+
+// nilEmbedChain promotes X through two levels of embedded pointers, so the
+// nil can sit at either level.
+type nilEmbedChain struct {
+	A int
+	*nilEmbedL1
+	C int
+}
+
+// nilEmbedValueOuter embeds nilEmbedL1 by value, so X is promoted through a
+// value embed and then a pointer embed.
+type nilEmbedValueOuter struct {
+	A int
+	nilEmbedL1
+	C int
+}
+
 // ansiRe matches ANSI SGR escape sequences.
 var ansiRe = regexp.MustCompile("\x1b\\[[0-9;]*m")
 
 // TestEncode_NilEmbeddedStructPointer verifies that a nil embedded struct
 // pointer does not leave a dangling separator or newline behind when its
-// promoted field is rolled back, regardless of position, colorization or
+// promoted field is omitted, regardless of position, colorization or
 // indentation. Output (with ANSI stripped) must match encoding/json exactly.
 // See issue #56.
 func TestEncode_NilEmbeddedStructPointer(t *testing.T) {
@@ -827,6 +847,11 @@ func TestEncode_NilEmbeddedStructPointer(t *testing.T) {
 		nilEmbedFirst{A: 1, C: 2},
 		nilEmbedMiddle{A: 1, C: 2},
 		nilEmbedLast{A: 1, C: 2},
+		nilEmbedChain{A: 1, C: 2},
+		nilEmbedChain{A: 1, nilEmbedL1: &nilEmbedL1{}, C: 2},
+		nilEmbedChain{A: 1, nilEmbedL1: &nilEmbedL1{nilEmbedInner: &nilEmbedInner{X: 3}}, C: 2},
+		nilEmbedValueOuter{A: 1, C: 2},
+		nilEmbedValueOuter{A: 1, nilEmbedL1: nilEmbedL1{nilEmbedInner: &nilEmbedInner{X: 3}}, C: 2},
 	}
 
 	palettes := []struct {
@@ -837,10 +862,10 @@ func TestEncode_NilEmbeddedStructPointer(t *testing.T) {
 		{name: "color", clrs: jsoncolor.DefaultColors()},
 	}
 
-	for _, v := range values {
+	for i, v := range values {
 		for _, pal := range palettes {
 			for _, indent := range []bool{false, true} {
-				name := fmt.Sprintf("%T/%s/indent=%v", v, pal.name, indent)
+				name := fmt.Sprintf("%d_%T/%s/indent=%v", i, v, pal.name, indent)
 				t.Run(name, func(t *testing.T) {
 					var want []byte
 					var err error

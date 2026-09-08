@@ -77,11 +77,17 @@ type Tokenizer struct {
 	buffer [8]state
 }
 
+// state is one entry of the Tokenizer's container stack: the kind of
+// container being tokenized and the number of values seen in it so far,
+// which is what drives Tokenizer.Index and, for objects, the alternation
+// between keys and values.
 type state struct {
 	typ scope
 	len int
 }
 
+// scope identifies the kind of container a Tokenizer is inside: an array or
+// an object.
 type scope int
 
 const (
