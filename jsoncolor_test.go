@@ -813,6 +813,18 @@ type nilEmbedLast struct {
 	*nilEmbedInner
 }
 
+type nilEmbedL1 struct {
+	*nilEmbedInner
+}
+
+// nilEmbedChain promotes X through two levels of embedded pointers, so the
+// nil can sit at either level.
+type nilEmbedChain struct {
+	A int
+	*nilEmbedL1
+	C int
+}
+
 // ansiRe matches ANSI SGR escape sequences.
 var ansiRe = regexp.MustCompile("\x1b\\[[0-9;]*m")
 
@@ -827,6 +839,9 @@ func TestEncode_NilEmbeddedStructPointer(t *testing.T) {
 		nilEmbedFirst{A: 1, C: 2},
 		nilEmbedMiddle{A: 1, C: 2},
 		nilEmbedLast{A: 1, C: 2},
+		nilEmbedChain{A: 1, C: 2},
+		nilEmbedChain{A: 1, nilEmbedL1: &nilEmbedL1{}, C: 2},
+		nilEmbedChain{A: 1, nilEmbedL1: &nilEmbedL1{nilEmbedInner: &nilEmbedInner{X: 3}}, C: 2},
 	}
 
 	palettes := []struct {
@@ -837,10 +852,10 @@ func TestEncode_NilEmbeddedStructPointer(t *testing.T) {
 		{name: "color", clrs: jsoncolor.DefaultColors()},
 	}
 
-	for _, v := range values {
+	for i, v := range values {
 		for _, pal := range palettes {
 			for _, indent := range []bool{false, true} {
-				name := fmt.Sprintf("%T/%s/indent=%v", v, pal.name, indent)
+				name := fmt.Sprintf("%d_%T/%s/indent=%v", i, v, pal.name, indent)
 				t.Run(name, func(t *testing.T) {
 					var want []byte
 					var err error
