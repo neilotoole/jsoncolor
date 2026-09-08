@@ -1140,6 +1140,7 @@ func (e encoder) encodeStructPlain(b []byte, p unsafe.Pointer, st *structType) (
 	var k string
 	var n int
 	start := len(b)
+	escapeHTML := (e.flags & EscapeHTML) != 0
 
 	b = append(b, '{')
 
@@ -1162,18 +1163,18 @@ func (e encoder) encodeStructPlain(b []byte, p unsafe.Pointer, st *structType) (
 			}
 		}
 
-		if n != 0 {
-			b = append(b, ',')
-		}
-
-		if (e.flags & EscapeHTML) != 0 {
-			k = f.html
+		if escapeHTML {
+			k = f.keyPlainHTML
 		} else {
-			k = f.json
+			k = f.keyPlain
 		}
 
-		b = append(b, k...)
-		b = append(b, ':')
+		// k carries the separating comma; the first member drops it.
+		if n != 0 {
+			b = append(b, k...)
+		} else {
+			b = append(b, k[1:]...)
+		}
 
 		var err error
 		if b, err = f.codec.encode(e, b, v); err != nil {
@@ -1190,6 +1191,7 @@ func (e encoder) encodeStructIndented(b []byte, p unsafe.Pointer, st *structType
 	var k string
 	var n int
 	start := len(b)
+	escapeHTML := (e.flags & EscapeHTML) != 0
 
 	b = append(b, '{')
 
@@ -1220,15 +1222,14 @@ func (e encoder) encodeStructIndented(b []byte, p unsafe.Pointer, st *structType
 
 		b = append(b, '\n')
 
-		if (e.flags & EscapeHTML) != 0 {
-			k = f.html
+		if escapeHTML {
+			k = f.keyIndentHTML
 		} else {
-			k = f.json
+			k = f.keyIndent
 		}
 
 		b = e.indentr.appendIndentFast(b)
 		b = append(b, k...)
-		b = append(b, ':', ' ')
 
 		var err error
 		if b, err = f.codec.encode(e, b, v); err != nil {

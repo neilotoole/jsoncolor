@@ -748,6 +748,10 @@ func appendStructFields(fields []structField, t reflect.Type, offset uintptr, se
 	for i := range fields {
 		fields[i].json = encodeString(fields[i].name, 0)
 		fields[i].html = encodeString(fields[i].name, EscapeHTML)
+		fields[i].keyPlain = "," + fields[i].json + ":"
+		fields[i].keyPlainHTML = "," + fields[i].html + ":"
+		fields[i].keyIndent = fields[i].json + ": "
+		fields[i].keyIndentHTML = fields[i].html + ": "
 	}
 
 	sort.Slice(fields, func(i, j int) bool { return fields[i].index < fields[j].index })
@@ -1102,9 +1106,21 @@ type structField struct {
 
 	// json and html are the field's key as it is written to the output:
 	// name quoted and escaped, without and with HTML escaping respectively.
-	// They are precomputed so the encoders append them as-is.
+	// They are precomputed so the encoders append them as-is. The colorized
+	// walk uses them directly, since it colors the key and the punctuation
+	// around it separately.
 	json string
 	html string
+
+	// keyPlain and keyPlainHTML are the key with the punctuation that the
+	// compact colorless encoder writes around it, `,"key":`, so a member's
+	// prefix is one append; the first member skips the leading comma.
+	// keyIndent and keyIndentHTML are the indented form, `"key": `, which
+	// follows the newline and indentation the encoder writes itself.
+	keyPlain      string
+	keyPlainHTML  string
+	keyIndent     string
+	keyIndentHTML string
 
 	// name is the JSON member name, from the json tag if present, otherwise
 	// the Go field name. The decoder looks fields up by it.
