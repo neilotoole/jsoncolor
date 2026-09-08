@@ -18,19 +18,10 @@ import (
 const hex = "0123456789abcdef"
 
 func (e encoder) encodeNull(b []byte, _ unsafe.Pointer) ([]byte, error) {
-	if e.clrs == nil {
-		return append(b, "null"...), nil
-	}
 	return e.clrs.appendNull(b), nil
 }
 
 func (e encoder) encodeBool(b []byte, p unsafe.Pointer) ([]byte, error) {
-	if e.clrs == nil {
-		if *(*bool)(p) {
-			return append(b, "true"...), nil
-		}
-		return append(b, "false"...), nil
-	}
 	return e.clrs.appendBool(b, *(*bool)(p)), nil
 }
 
