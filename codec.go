@@ -372,6 +372,20 @@ func constructMapCodec(t reflect.Type, seen map[reflect.Type]*structType) codec 
 	kc := codec{}
 	vc := constructCodec(v, seen, false)
 
+	// String-keyed maps of a few common value types get a specialized
+	// encoder that ranges over the map directly instead of going through
+	// reflect (see mapstring.go). Decoding still uses the generic path built
+	// below, so these cases fall through after setting the encoder.
+	var encode encodeFunc
+	switch {
+	case k == stringType && v == stringType:
+		encode = encoder.encodeMapStringString
+	case k == stringType && v == boolType:
+		encode = encoder.encodeMapStringBool
+	case k == stringType && v == stringsType:
+		encode = constructMapStringStringSliceEncodeFunc(vc.encode)
+	}
+
 	if k.Implements(textMarshalerType) || reflect.PointerTo(k).Implements(textUnmarshalerType) {
 		kc.encode = constructTextMarshalerEncodeFunc(k, false)
 		kc.decode = constructTextUnmarshalerDecodeFunc(k, true)
@@ -429,8 +443,12 @@ func constructMapCodec(t reflect.Type, seen map[reflect.Type]*structType) codec 
 		vc.encode = constructInlineValueEncodeFunc(vc.encode)
 	}
 
+	if encode == nil {
+		encode = constructMapEncodeFunc(t, kc.encode, vc.encode, sortKeys)
+	}
+
 	return codec{
-		encode: constructMapEncodeFunc(t, kc.encode, vc.encode, sortKeys),
+		encode: encode,
 		decode: constructMapDecodeFunc(t, kc.decode, vc.decode),
 	}
 }
@@ -1210,6 +1228,7 @@ var (
 
 	numberType     = reflect.TypeOf(json.Number(""))
 	stringType     = reflect.TypeOf("")
+	stringsType    = reflect.TypeOf([]string(nil))
 	bytesType      = reflect.TypeOf(([]byte)(nil))
 	durationType   = reflect.TypeOf(time.Duration(0))
 	timeType       = reflect.TypeOf(time.Time{})
