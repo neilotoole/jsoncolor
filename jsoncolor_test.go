@@ -1115,3 +1115,22 @@ func TestEncode_DefaultColors_NoPuncReset(t *testing.T) {
 		require.NotContains(t, got, punc+reset, "bare reset after %q in %q", punc, got)
 	}
 }
+
+// TestEncode_NilBytes_SingleColor verifies that a nil []byte is a single null
+// token colored by Colors.Null alone, and a non-nil []byte a single bytes
+// token colored by Colors.Bytes alone, with exactly one reset each.
+func TestEncode_NilBytes_SingleColor(t *testing.T) {
+	const reset = "\x1b[0m"
+	clrs := &jsoncolor.Colors{Bytes: jsoncolor.Color("B"), Null: jsoncolor.Color("N")}
+
+	buf := &bytes.Buffer{}
+	enc := jsoncolor.NewEncoder(buf)
+	enc.SetColors(clrs)
+
+	require.NoError(t, enc.Encode(struct{ B []byte }{}))
+	require.Equal(t, `{"B":Nnull`+reset+"}\n", buf.String())
+
+	buf.Reset()
+	require.NoError(t, enc.Encode(struct{ B []byte }{B: []byte("a")}))
+	require.Equal(t, `{"B":B"YQ=="`+reset+"}\n", buf.String())
+}

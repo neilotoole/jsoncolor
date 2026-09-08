@@ -336,6 +336,13 @@ func (e encoder) encodeToString(b []byte, p unsafe.Pointer, encode encodeFunc) (
 }
 
 func (e encoder) encodeBytes(b []byte, p unsafe.Pointer) ([]byte, error) {
+	// A nil slice renders as null, which is a null token: color it with
+	// Null alone rather than nesting it inside the Bytes color. See
+	// issue #67.
+	if *(*[]byte)(p) == nil {
+		return e.clrs.appendNull(b), nil
+	}
+
 	if e.clrs == nil || len(e.clrs.Bytes) == 0 {
 		return e.doEncodeBytes(b, p)
 	}
