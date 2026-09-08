@@ -1535,7 +1535,7 @@ func (e encoder) appendRawMessageTokens(b, s []byte) ([]byte, error) {
 	if err == nil && len(stack) > 0 {
 		// Input ended inside a container. The tokenizer reports no error
 		// for that, but the message is malformed all the same.
-		err = syntaxError(s[len(s):], "unexpected end of JSON input")
+		err = unexpectedEOF(s[len(s):])
 	}
 
 	if err != nil {
