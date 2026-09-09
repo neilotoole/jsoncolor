@@ -1,6 +1,6 @@
 [![Actions Status](https://github.com/neilotoole/jsoncolor/workflows/Go/badge.svg)](https://github.com/neilotoole/jsoncolor/actions?query=workflow%3AGo)
 [![Go Report Card](https://goreportcard.com/badge/neilotoole/jsoncolor)](https://goreportcard.com/report/neilotoole/jsoncolor)
-[![release](https://img.shields.io/badge/release-v0.10.0-green.svg)](https://github.com/neilotoole/jsoncolor#v0100)
+[![release](https://img.shields.io/badge/release-v0.10.1-green.svg)](https://github.com/neilotoole/jsoncolor#v0101)
 [![Go Reference](https://pkg.go.dev/badge/github.com/neilotoole/jsoncolor.svg)](https://pkg.go.dev/github.com/neilotoole/jsoncolor)
 [![license](https://img.shields.io/github/license/neilotoole/jsoncolor)](./LICENSE)
 
@@ -330,11 +330,16 @@ encoding package, which itself was a fork of the
 original `sq` JSON encoder was forked from Segment's codebase at `v0.1.14`, so
 the codebases have drifted significantly by now.
 
-### [Unreleased](https://github.com/neilotoole/jsoncolor/compare/v0.10.0...HEAD)
+### [v0.10.1](https://github.com/neilotoole/jsoncolor/releases/tag/v0.10.1)
+
+`MarshalIndent` now indents inline, and the documentation is brought up to date.
+There are no exported API changes and no change to encoder output.
 
 #### Changed
 
 - [#77](https://github.com/neilotoole/jsoncolor/issues/77): `MarshalIndent` now indents inline, using the same `Indenter` as `Encoder.SetIndent`, instead of marshaling compact and re-indenting the result with `Indent`. Output is byte-identical to before, including `MarshalIndent(v, "", "")`, which keeps `encoding/json`'s line-breaking behavior rather than the `Encoder`'s disable-on-empty rule; `TestMarshalIndent_Parity` pins it against the previous algorithm across the encode corpus. Measured with `BenchmarkMarshalIndent` on an Apple M1 Max under Go 1.26.5 (`-count=10`, benchstat): 59% faster on the decoded `sakila_actor.json` document and 50% faster on a slice of 1,000 synthetic records, allocating about half the bytes.
+- [#75](https://github.com/neilotoole/jsoncolor/issues/75): The fixed ANSI reset that closes every colorized token is now documented, on `Color` and `Colors` and in a README "Color reset" section: why output is not safe to nest inside an already-styled region, and why an attribute-specific closer cannot be computed from an opaque prefix. Documentation only.
+- [#78](https://github.com/neilotoole/jsoncolor/pull/78): README overhaul. The stale caveat that `IsColorTerminal` "will fail inside Goland" is replaced, in the README and both examples, with the actual condition: stdout is not a terminal. The 2021 benchmark table is regenerated on current hardware and Go; the Notes section is dissolved into Punctuation, Detecting color support, and a new "Relationship to `encoding/json`" section; and the dead linter/porting note is removed.
 
 ### [v0.10.0](https://github.com/neilotoole/jsoncolor/releases/tag/v0.10.0)
 
