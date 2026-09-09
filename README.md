@@ -247,57 +247,24 @@ Two other Go JSON colorization packages,
 they do not provide a stdlib-compatible `Encoder`.
 
 Apple M1 Max, Go 1.26.5, `-benchtime=2s -count=10`, summarized by
-[`benchstat`](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat):
+[`benchstat`](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat). Rows are named by
+sub-benchmark, without the `Encode/` prefix and `-10` GOMAXPROCS suffix. Variation across the
+ten runs was within 2% on every row and is omitted.
 
-```
-                                      │   v0.10.0   │
-                                      │   sec/op    │
-Encode/stdlib_NoIndent-10               9.663m ± 1%
-Encode/stdlib_Indent-10                 16.53m ± 1%
-Encode/segmentj_NoIndent-10             4.991m ± 1%
-Encode/segmentj_Indent-10               11.39m ± 1%
-Encode/neilotoole_NoIndent_NoColor-10   5.245m ± 1%
-Encode/neilotoole_Indent_NoColor-10     6.066m ± 1%
-Encode/neilotoole_NoIndent_Color-10     5.921m ± 1%
-Encode/neilotoole_Indent_Color-10       6.932m ± 1%
-Encode/nwidger_NoIndent_NoColor-10      102.5m ± 2%
-Encode/nwidger_Indent_NoColor-10        123.7m ± 2%
-Encode/nwidger_NoIndent_Color-10        103.8m ± 1%
-Encode/nwidger_Indent_Color-10          123.7m ± 2%
-geomean                                 18.79m
-
-                                      │   v0.10.0    │
-                                      │     B/op     │
-Encode/stdlib_NoIndent-10               6.061Mi ± 0%
-Encode/stdlib_Indent-10                 8.058Mi ± 0%
-Encode/segmentj_NoIndent-10             4.232Mi ± 0%
-Encode/segmentj_Indent-10               3.226Mi ± 0%
-Encode/neilotoole_NoIndent_NoColor-10   4.232Mi ± 0%
-Encode/neilotoole_Indent_NoColor-10     6.225Mi ± 0%
-Encode/neilotoole_NoIndent_Color-10     8.232Mi ± 0%
-Encode/neilotoole_Indent_Color-10       10.23Mi ± 0%
-Encode/nwidger_NoIndent_NoColor-10      55.08Mi ± 0%
-Encode/nwidger_Indent_NoColor-10        59.96Mi ± 0%
-Encode/nwidger_NoIndent_Color-10        55.08Mi ± 0%
-Encode/nwidger_Indent_Color-10          59.96Mi ± 0%
-geomean                                 12.61Mi
-
-                                      │   v0.10.0   │
-                                      │  allocs/op  │
-Encode/stdlib_NoIndent-10               70.02k ± 0%
-Encode/stdlib_Indent-10                 70.03k ± 0%
-Encode/segmentj_NoIndent-10             10.02k ± 0%
-Encode/segmentj_Indent-10               10.02k ± 0%
-Encode/neilotoole_NoIndent_NoColor-10   10.02k ± 0%
-Encode/neilotoole_Indent_NoColor-10     10.02k ± 0%
-Encode/neilotoole_NoIndent_Color-10     10.03k ± 0%
-Encode/neilotoole_Indent_Color-10       10.03k ± 0%
-Encode/nwidger_NoIndent_NoColor-10      2.270M ± 0%
-Encode/nwidger_Indent_NoColor-10        2.700M ± 0%
-Encode/nwidger_NoIndent_Color-10        2.270M ± 0%
-Encode/nwidger_Indent_Color-10          2.700M ± 0%
-geomean                                 86.96k
-```
+| Benchmark | sec/op | B/op | allocs/op |
+|---|---:|---:|---:|
+| `stdlib_NoIndent` | 9.663m | 6.061Mi | 70.02k |
+| `stdlib_Indent` | 16.53m | 8.058Mi | 70.03k |
+| `segmentj_NoIndent` | 4.991m | 4.232Mi | 10.02k |
+| `segmentj_Indent` | 11.39m | 3.226Mi | 10.02k |
+| `neilotoole_NoIndent_NoColor` | 5.245m | 4.232Mi | 10.02k |
+| `neilotoole_Indent_NoColor` | 6.066m | 6.225Mi | 10.02k |
+| `neilotoole_NoIndent_Color` | 5.921m | 8.232Mi | 10.03k |
+| `neilotoole_Indent_Color` | 6.932m | 10.23Mi | 10.03k |
+| `nwidger_NoIndent_NoColor` | 102.5m | 55.08Mi | 2.270M |
+| `nwidger_Indent_NoColor` | 123.7m | 59.96Mi | 2.700M |
+| `nwidger_NoIndent_Color` | 103.8m | 55.08Mi | 2.270M |
+| `nwidger_Indent_Color` | 123.7m | 59.96Mi | 2.700M |
 
 What these particular results say:
 
