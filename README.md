@@ -109,6 +109,27 @@ func DefaultColors() *Colors {
 As seen above, use the `Color` zero value (`Color{}`) to
 disable colorization for that JSON element.
 
+### Color reset
+
+`Color` is the prefix only. The encoder closes every colorized token with the
+fixed sequence `\x1b[0m` (SGR 0), and there is no way for a caller to supply a
+different closer.
+
+`\x1b[0m` resets *every* terminal attribute, not just the ones the prefix set.
+That is the safe default: no attribute can leak out of a token. The trade-off is
+composability. jsoncolor output is not safe to nest inside a region that is
+already styled, because the first colorized token clears that styling for the
+remainder of the output. Rendering colorized JSON inside a diff line that has a
+background color, inside a TUI panel with an inherited style, or after a styled
+log prefix will each drop the surrounding style.
+
+An attribute-specific closer (`\x1b[39m` for "default foreground", `\x1b[22m`
+for "normal intensity", and so on) would leave untouched attributes alone, but
+jsoncolor cannot compute one. `Color` arrives as already-rendered opaque bytes,
+so given `\x1b[34;1m` the encoder has no way to know that those parameters mean
+blue and bold. See [#75](https://github.com/neilotoole/jsoncolor/issues/75) for
+the full analysis, including the API options if this is ever addressed.
+
 ### Helper for `fatih/color`
 
 It can be inconvenient to use terminal codes, e.g. `json.Color("\x1b[36m")`.
