@@ -35,7 +35,7 @@ func ExampleEncoder() {
 		enc = json.NewEncoder(os.Stdout)
 	}
 
-	m := map[string]interface{}{
+	m := map[string]any{
 		"a": 1,
 		"b": true,
 		"c": "hello",
@@ -70,7 +70,7 @@ func Example_fatihColor() {
 	}
 	enc.SetIndent("", "  ")
 
-	m := map[string]interface{}{
+	m := map[string]any{
 		"a": 1,
 		"b": true,
 		"c": "hello",

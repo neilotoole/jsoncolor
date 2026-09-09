@@ -6,12 +6,15 @@
 
 # jsoncolor
 
-Package `neilotoole/jsoncolor` is a drop-in replacement for stdlib
-[`encoding/json`](https://pkg.go.dev/encoding/json) that outputs colorized JSON.
+Package `neilotoole/jsoncolor` is a drop-in replacement for the standard library's
+[`encoding/json`](https://pkg.go.dev/encoding/json) that emits colorized JSON, in the
+style of [`jq`](https://jqlang.github.io/jq/).
 
-Why? Well, [`jq`](https://jqlang.github.io/jq/) colorizes its output by default, and color output
-is desirable for many Go CLIs. This package performs colorization (and indentation) inline
-in the encoder, and is significantly faster than stdlib at indentation.
+Colorization and indentation are performed inline in the encoder, in a single pass over
+the value, which makes indented output faster than indenting with `encoding/json` (see
+[Benchmarks](#benchmarks)). Color is opt-in per `Encoder`, honors `NO_COLOR` and
+`FORCE_COLOR`, and works on Windows via
+[`mattn/go-colorable`](https://github.com/mattn/go-colorable).
 
 From the example [`jc`](./cmd/jc/main.go) app:
 
@@ -60,7 +63,7 @@ func main() {
     enc = json.NewEncoder(os.Stdout)
   }
 
-  m := map[string]interface{}{
+  m := map[string]any{
     "a": 1,
     "b": true,
     "c": "hello",
@@ -73,7 +76,7 @@ func main() {
 }
 ```
 
-### Configuration
+## Configuration
 
 To enable colorization, invoke [`enc.SetColors`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Encoder.SetColors).
 
@@ -109,6 +112,14 @@ func DefaultColors() *Colors {
 As seen above, use the `Color` zero value (`Color{}`) to
 disable colorization for that JSON element.
 
+### Punctuation
+
+[`Colors.Punc`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Colors) is the
+fallback color for punctuation (`[]{},:`). The individual classes can also be set via
+`Colors.Brackets`, `Colors.Braces`, `Colors.Comma`, and `Colors.Colon`, each falling back
+to `Colors.Punc` when unset. The structural `"` around strings and keys is colored by
+`Colors.String` and `Colors.Key`, not `Colors.Punc`.
+
 ### Color reset
 
 `Color` is the prefix only. The encoder closes every colorized token with the
@@ -129,6 +140,26 @@ jsoncolor cannot compute one. `Color` arrives as already-rendered opaque bytes,
 so given `\x1b[34;1m` the encoder has no way to know that those parameters mean
 blue and bold. See [#75](https://github.com/neilotoole/jsoncolor/issues/75) for
 the full analysis, including the API options if this is ever addressed.
+
+### Detecting color support
+
+[`IsColorTerminal`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#IsColorTerminal)
+reports whether a writer is a terminal that can display color. It checks `NO_COLOR`, then
+`FORCE_COLOR`, then `TERM=dumb`, and finally whether the writer is a terminal. It returns
+false whenever output is piped or redirected, which is the desired behavior: escape codes
+should not end up in a file or in a downstream program. Set `FORCE_COLOR` to colorize
+anyway, e.g. when piping to a pager that renders escape codes (`jc | less -R`).
+
+`IsColorTerminal` likewise returns false in an IDE's run-configuration console, which is not
+a terminal at all: it does not set `TERM`, and is a pipe rather than a TTY. In JetBrains IDEs,
+ticking *Emulate terminal in output console* in the run configuration gives the process a real
+terminal, and color then works. An IDE's embedded terminal, such as GoLand's Terminal tool
+window, is already a real terminal and needs nothing.
+
+On Windows, `IsColorTerminal` also enables virtual terminal processing on the console. The
+usage example additionally wraps stdout with
+[`colorable.NewColorable`](https://pkg.go.dev/github.com/mattn/go-colorable#NewColorable),
+which translates escape codes for Windows consoles that do not process them natively.
 
 ### Helper for `fatih/color`
 
@@ -152,17 +183,39 @@ A helper package provides an adapter for [`fatih/color`](https://github.com/fati
   enc.SetColors(clrs)
 ```
 
-### Drop-in for `encoding/json`
+## Relationship to `encoding/json`
 
-This package is a full drop-in for stdlib [`encoding/json`](https://pkg.go.dev/encoding/json)
-(thanks to the ancestral [`segmentio/encoding/json`](https://pkg.go.dev/github.com/segmentio/encoding/json)
-pkg being a full drop-in).
-
-To drop-in, just use an import alias:
+This package is a full drop-in for [`encoding/json`](https://pkg.go.dev/encoding/json),
+a property inherited from the ancestral
+[`segmentio/encoding/json`](https://pkg.go.dev/github.com/segmentio/encoding/json) package.
+To drop in, alias the import:
 
 ```go
   import json "github.com/neilotoole/jsoncolor"
 ```
+
+A few things are worth knowing:
+
+- [`Marshal`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Marshal) and
+  [`MarshalIndent`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#MarshalIndent) are
+  uncolored. Color reaches the encoder only through
+  [`Encoder.SetColors`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Encoder.SetColors),
+  or by calling the low-level
+  [`Append`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Append) with a `*Colors`.
+- `MarshalIndent` indents after the fact, by re-scanning the compact output, the same as
+  `encoding/json`. Inline indentation, the faster path, is what
+  [`Encoder.SetIndent`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Encoder.SetIndent)
+  does; `Append` gets it when passed an
+  [`Indenter`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Indenter), constructed with
+  [`NewIndenter`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#NewIndenter).
+- [`Encoder.SetSortMapKeys`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Encoder.SetSortMapKeys)
+  toggles map key sorting, which `encoding/json` always performs and which is on by default
+  here too.
+  [`Encoder.SetTrustRawMessage`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Encoder.SetTrustRawMessage)
+  skips validation of `RawMessage` values known to be valid JSON, e.g. because they came
+  from `Unmarshal`. Both are inherited from `segmentio/encoding`.
+- `time.Duration` encodes as its `int64` nanosecond count, matching `encoding/json`.
+  `segmentio/encoding` encodes it as a string (`"3s"`); this package does not follow it.
 
 ## Example app: `jc`
 
@@ -177,74 +230,89 @@ $ cat ./testdata/sakila_actor.json | jc
 
 ## Benchmarks
 
-Note that this package contains [`golang_bench_test.go`](./golang_bench_test.go), which
-is inherited from `segmentj`. But here we're interested in [`benchmark_test.go:BenchmarkEncode`](./benchmark_test.go),
-which benchmarks encoding performance versus other JSON encoder packages.
-The results below benchmark the following:
+[`benchmark_test.go:BenchmarkEncode`](./benchmark_test.go) encodes 10,000 rows of mixed
+scalar values, each also carrying the decoded `testdata/sakila_actor.json` document, with
+four encoders:
 
-- Stdlib [`encoding/json`](https://pkg.go.dev/encoding/json) (`go1.17.1`).
-- [`segmentj`](https://github.com/segmentio/encoding): `v0.1.14`, which was when `jsoncolor` was forked. The newer `segmentj` code performs even better.
-- `neilotoole/jsoncolor`: (this package) `v0.6.0`.
-- [`nwidger/jsoncolor`](https://github.com/nwidger/jsoncolor): `v0.3.0`, latest at time of benchmarks.
+- Stdlib [`encoding/json`](https://pkg.go.dev/encoding/json).
+- [`segmentio/encoding`](https://github.com/segmentio/encoding) `v0.5.4`, the upstream this
+  package is forked from (as `segmentj`).
+- `neilotoole/jsoncolor` (this package) `v0.10.0`, with and without color.
+- [`nwidger/jsoncolor`](https://github.com/nwidger/jsoncolor) `v0.3.2`.
 
-Note that two other Go JSON colorization packages ([`hokaccha/go-prettyjson`](https://github.com/hokaccha/go-prettyjson) and
-[`TylerBrock/colorjson`](https://github.com/TylerBrock/colorjson)) are excluded from
-these benchmarks because they do not provide a stdlib-compatible `Encoder` impl.
+Two other Go JSON colorization packages,
+[`hokaccha/go-prettyjson`](https://github.com/hokaccha/go-prettyjson) and
+[`TylerBrock/colorjson`](https://github.com/TylerBrock/colorjson), are excluded because
+they do not provide a stdlib-compatible `Encoder`.
+
+Apple M1 Max, Go 1.26.5, `-benchtime=2s -count=10`, summarized by
+[`benchstat`](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat):
 
 ```
-$ go test -bench=BenchmarkEncode -benchtime="5s"
-goarch: amd64
-pkg: github.com/neilotoole/jsoncolor
-cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
-BenchmarkEncode/stdlib_NoIndent-16                           181          33047390 ns/op         8870685 B/op     120022 allocs/op
-BenchmarkEncode/stdlib_Indent-16                             124          48093178 ns/op        10470366 B/op     120033 allocs/op
-BenchmarkEncode/segmentj_NoIndent-16                         415          14658699 ns/op         3788911 B/op      10020 allocs/op
-BenchmarkEncode/segmentj_Indent-16                           195          30628798 ns/op         5404492 B/op      10025 allocs/op
-BenchmarkEncode/neilotoole_NoIndent_NoColor-16               362          16522399 ns/op         3789034 B/op      10020 allocs/op
-BenchmarkEncode/neilotoole_Indent_NoColor-16                 303          20146856 ns/op         5460753 B/op      10021 allocs/op
-BenchmarkEncode/neilotoole_NoIndent_Color-16                 295          19989420 ns/op        10326019 B/op      10029 allocs/op
-BenchmarkEncode/neilotoole_Indent_Color-16                   246          24714163 ns/op        11996890 B/op      10030 allocs/op
-BenchmarkEncode/nwidger_NoIndent_NoColor-16                   10         541107983 ns/op        92934231 B/op    4490210 allocs/op
-BenchmarkEncode/nwidger_Indent_NoColor-16                      7         798088086 ns/op        117258321 B/op   6290213 allocs/op
-BenchmarkEncode/nwidger_indent_NoIndent_Colo-16               10         542002051 ns/op        92935639 B/op    4490224 allocs/op
-BenchmarkEncode/nwidger_indent_Indent_Color-16                 7         799928353 ns/op        117259195 B/op   6290220 allocs/op
+                                      │ v0.10.0.txt │
+                                      │   sec/op    │
+Encode/stdlib_NoIndent-10               9.663m ± 1%
+Encode/stdlib_Indent-10                 16.53m ± 1%
+Encode/segmentj_NoIndent-10             4.991m ± 1%
+Encode/segmentj_Indent-10               11.39m ± 1%
+Encode/neilotoole_NoIndent_NoColor-10   5.245m ± 1%
+Encode/neilotoole_Indent_NoColor-10     6.066m ± 1%
+Encode/neilotoole_NoIndent_Color-10     5.921m ± 1%
+Encode/neilotoole_Indent_Color-10       6.932m ± 1%
+Encode/nwidger_NoIndent_NoColor-10      102.5m ± 2%
+Encode/nwidger_Indent_NoColor-10        123.7m ± 2%
+Encode/nwidger_NoIndent_Color-10        103.8m ± 1%
+Encode/nwidger_Indent_Color-10          123.7m ± 2%
+geomean                                 18.79m
+
+                                      │ v0.10.0.txt  │
+                                      │     B/op     │
+Encode/stdlib_NoIndent-10               6.061Mi ± 0%
+Encode/stdlib_Indent-10                 8.058Mi ± 0%
+Encode/segmentj_NoIndent-10             4.232Mi ± 0%
+Encode/segmentj_Indent-10               3.226Mi ± 0%
+Encode/neilotoole_NoIndent_NoColor-10   4.232Mi ± 0%
+Encode/neilotoole_Indent_NoColor-10     6.225Mi ± 0%
+Encode/neilotoole_NoIndent_Color-10     8.232Mi ± 0%
+Encode/neilotoole_Indent_Color-10       10.23Mi ± 0%
+Encode/nwidger_NoIndent_NoColor-10      55.08Mi ± 0%
+Encode/nwidger_Indent_NoColor-10        59.96Mi ± 0%
+Encode/nwidger_NoIndent_Color-10        55.08Mi ± 0%
+Encode/nwidger_Indent_Color-10          59.96Mi ± 0%
+geomean                                 12.61Mi
+
+                                      │ v0.10.0.txt │
+                                      │  allocs/op  │
+Encode/stdlib_NoIndent-10               70.02k ± 0%
+Encode/stdlib_Indent-10                 70.03k ± 0%
+Encode/segmentj_NoIndent-10             10.02k ± 0%
+Encode/segmentj_Indent-10               10.02k ± 0%
+Encode/neilotoole_NoIndent_NoColor-10   10.02k ± 0%
+Encode/neilotoole_Indent_NoColor-10     10.02k ± 0%
+Encode/neilotoole_NoIndent_Color-10     10.03k ± 0%
+Encode/neilotoole_Indent_Color-10       10.03k ± 0%
+Encode/nwidger_NoIndent_NoColor-10      2.270M ± 0%
+Encode/nwidger_Indent_NoColor-10        2.700M ± 0%
+Encode/nwidger_NoIndent_Color-10        2.270M ± 0%
+Encode/nwidger_Indent_Color-10          2.700M ± 0%
+geomean                                 86.96k
 ```
 
-As always, take benchmarks with a large grain of salt, as they're based on a (small) synthetic benchmark.
-More benchmarks would give a better picture (and note as well that the benchmarked `segmentj` is an older version, `v0.1.14`).
+What these particular results say:
 
-All that having been said, what can we surmise from these particular results?
+- Indentation is where the inline approach pays off. jsoncolor's indented output is 2.7×
+  faster than `encoding/json`'s and 1.9× faster than the segmentio upstream's, both of which
+  indent in a second pass. Indenting adds 16% to jsoncolor's compact time, against 71% for
+  `encoding/json` and 128% for segmentio.
+- Compact, uncolored output runs about 5% behind the segmentio upstream, which is the cost of
+  the color-capable walk. It is still 1.8× faster than `encoding/json`, with a seventh of the
+  allocations.
+- Color adds 13–14% and about ten allocations.
+- `nwidger/jsoncolor` is roughly 20× slower, with over 200× the allocations.
 
-- `segmentj` performs better than `stdlib` at all encoding tasks.
-- `jsoncolor` performs better than `segmentj` for indentation (which makes sense, as indentation is performed inline).
-- `jsoncolor` performs better than `stdlib` at all encoding tasks.
-
-Again, trust these benchmarks at your peril. Create your own benchmarks for your own workload.
-
-## Notes
-
-- The [`.golangci.yml`](./.golangci.yml) linter settings have been fiddled with to hush some
-  linting issues inherited from the `segmentio` codebase at the time of forking. Thus, the linter report
-  may not be of great use. In an ideal world, the `jsoncolor` functionality would be [ported](https://github.com/neilotoole/jsoncolor/issues/15) to a
-  more recent (and better-linted) version of the `segementio` codebase.
-- The `segmentio` encoder (at least as of `v0.1.14`) encodes `time.Duration` as string, while `stdlib` outputs as `int64`.
-  This package follows `stdlib`.
-- The [`Colors.Punc`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Colors) field is the
-  fallback color for punctuation (`[]{},:`). As of `v0.9.0` the individual classes can also be set
-  via `Colors.Brackets`, `Colors.Braces`, `Colors.Comma`, and `Colors.Colon`, each falling back to
-  `Colors.Punc` when unset. (The structural `"` is colored by `Colors.String`/`Colors.Key`, not
-  `Colors.Punc`.)
-- [`IsColorTerminal`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#IsColorTerminal)
-  checks `NO_COLOR`, then `FORCE_COLOR`, then `TERM=dumb`, and finally whether the writer is a
-  terminal. It returns false whenever output is piped or redirected, which is the desired
-  behavior: escape codes should not end up in a file or in a downstream program. Set
-  `FORCE_COLOR` to colorize anyway, e.g. when piping to a pager that renders escape codes
-  (`jc | less -R`).
-- `IsColorTerminal` likewise returns false in an IDE's run-configuration console, which is not
-  a terminal at all: it does not set `TERM`, and is a pipe rather than a TTY. In JetBrains IDEs,
-  ticking *Emulate terminal in output console* in the run configuration gives the process a real
-  terminal, and color then works. An IDE's embedded terminal, such as GoLand's Terminal tool
-  window, is already a real terminal and needs nothing.
+This is one synthetic document; benchmark your own workload. For a per-shape comparison
+against the segmentio upstream, see `BenchmarkCmp` and the table in the
+[v0.10.0](#v0100) changelog entry.
 
 ## Contributing
 
@@ -346,7 +414,7 @@ Documentation and repository housekeeping; no functional changes to the library.
 
 ## Acknowledgments
 
-- [`jq`](https://stedolan.github.io/jq/): sine qua non.
+- [`jq`](https://jqlang.github.io/jq/): sine qua non.
 - [`segmentio/encoding`](https://github.com/segmentio/encoding): `jsoncolor` is layered into Segment's JSON encoder. They did the hard work. Much gratitude to that team.
 - [`sq`](https://github.com/neilotoole/sq): `jsoncolor` is effectively an extract of code created specifically for `sq`.
 - [`mattn/go-colorable`](https://github.com/mattn/go-colorable): no project is complete without `mattn` having played a role.
