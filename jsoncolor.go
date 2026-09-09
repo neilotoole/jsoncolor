@@ -2,6 +2,10 @@ package jsoncolor
 
 // Colors specifies colorization of JSON output. Each field
 // is a Color, which is simply the bytes of the terminal color code.
+//
+// Each field supplies only the prefix for its token class; the encoder always
+// closes a colorized token with the fixed ANSI reset "\x1b[0m". See [Color]
+// for what that means when jsoncolor output is nested inside styled output.
 type Colors struct {
 	// Null is the color for JSON nil.
 	Null Color
@@ -177,6 +181,19 @@ func (c *Colors) textMarshalerColor() Color {
 // Example value:
 //
 //	number := Color("\x1b[36m")
+//
+// Color is the prefix only: there is no mechanism for a caller to supply a
+// closer. Every colorized token is closed with the fixed sequence "\x1b[0m"
+// (SGR 0), which resets every terminal attribute, not merely those that the
+// prefix set. No attribute can leak out of a token, which is why this is the
+// default, but it does mean that jsoncolor output is not safe to nest inside
+// an already-styled region: the first colorized token clears the ambient
+// styling, and it stays cleared for the remainder of the output.
+//
+// So, writing colorized JSON into a line that carries a background color, or
+// into a TUI panel with an inherited style, drops that style at the first
+// token. A caller needing the surrounding style preserved must re-apply it
+// after encoding, or write the JSON outside the styled region.
 type Color []byte
 
 // ansiReset is the ANSI ansiReset escape code.
