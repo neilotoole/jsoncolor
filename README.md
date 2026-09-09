@@ -250,7 +250,7 @@ Apple M1 Max, Go 1.26.5, `-benchtime=2s -count=10`, summarized by
 [`benchstat`](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat):
 
 ```
-                                      │ v0.10.0.txt │
+                                      │   v0.10.0   │
                                       │   sec/op    │
 Encode/stdlib_NoIndent-10               9.663m ± 1%
 Encode/stdlib_Indent-10                 16.53m ± 1%
@@ -266,7 +266,7 @@ Encode/nwidger_NoIndent_Color-10        103.8m ± 1%
 Encode/nwidger_Indent_Color-10          123.7m ± 2%
 geomean                                 18.79m
 
-                                      │ v0.10.0.txt  │
+                                      │   v0.10.0    │
                                       │     B/op     │
 Encode/stdlib_NoIndent-10               6.061Mi ± 0%
 Encode/stdlib_Indent-10                 8.058Mi ± 0%
@@ -282,7 +282,7 @@ Encode/nwidger_NoIndent_Color-10        55.08Mi ± 0%
 Encode/nwidger_Indent_Color-10          59.96Mi ± 0%
 geomean                                 12.61Mi
 
-                                      │ v0.10.0.txt │
+                                      │   v0.10.0   │
                                       │  allocs/op  │
 Encode/stdlib_NoIndent-10               70.02k ± 0%
 Encode/stdlib_Indent-10                 70.03k ± 0%
