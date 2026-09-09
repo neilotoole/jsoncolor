@@ -40,8 +40,8 @@ import (
 func main() {
   var enc *json.Encoder
 
-  // Note: this check will fail if running inside Goland (and
-  // other IDEs?) as IsColorTerminal will return false.
+  // IsColorTerminal reports false when stdout is not a terminal,
+  // e.g. when piped or redirected, or in an IDE run console.
   if json.IsColorTerminal(os.Stdout) {
     // Safe to use color
     out := colorable.NewColorable(os.Stdout) // needed for Windows
@@ -234,6 +234,17 @@ Again, trust these benchmarks at your peril. Create your own benchmarks for your
   via `Colors.Brackets`, `Colors.Braces`, `Colors.Comma`, and `Colors.Colon`, each falling back to
   `Colors.Punc` when unset. (The structural `"` is colored by `Colors.String`/`Colors.Key`, not
   `Colors.Punc`.)
+- [`IsColorTerminal`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#IsColorTerminal)
+  checks `NO_COLOR`, then `FORCE_COLOR`, then `TERM=dumb`, and finally whether the writer is a
+  terminal. It returns false whenever output is piped or redirected, which is the desired
+  behavior: escape codes should not end up in a file or in a downstream program. Set
+  `FORCE_COLOR` to colorize anyway, e.g. when piping to a pager that renders escape codes
+  (`jc | less -R`).
+- `IsColorTerminal` likewise returns false in an IDE's run-configuration console, which is not
+  a terminal at all: it does not set `TERM`, and is a pipe rather than a TTY. In JetBrains IDEs,
+  ticking *Emulate terminal in output console* in the run configuration gives the process a real
+  terminal, and color then works. An IDE's embedded terminal, such as GoLand's Terminal tool
+  window, is already a real terminal and needs nothing.
 
 ## Contributing
 

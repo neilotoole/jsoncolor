@@ -15,8 +15,8 @@ import (
 func ExampleEncoder() {
 	var enc *json.Encoder
 
-	// Note: this check will fail if running inside Goland (and
-	// other IDEs?) as IsColorTerminal will return false.
+	// IsColorTerminal reports false when stdout is not a terminal,
+	// e.g. when piped or redirected, or in an IDE run console.
 	if json.IsColorTerminal(os.Stdout) {
 		// Safe to use color
 		out := colorable.NewColorable(os.Stdout) // needed for Windows
@@ -51,8 +51,8 @@ func ExampleEncoder() {
 func Example_fatihColor() {
 	var enc *json.Encoder
 
-	// Note: this check will fail if running inside Goland (and
-	// other IDEs?) as IsColorTerminal will return false.
+	// IsColorTerminal reports false when stdout is not a terminal,
+	// e.g. when piped or redirected, or in an IDE run console.
 	if json.IsColorTerminal(os.Stdout) {
 		out := colorable.NewColorable(os.Stdout)
 		enc = json.NewEncoder(out)
