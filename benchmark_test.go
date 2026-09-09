@@ -33,8 +33,8 @@ func BenchmarkEncode(b *testing.B) {
 		{name: "neilotoole_Indent_Color", fn: newEncNeilotoole, indent: true, color: true},
 		{name: "nwidger_NoIndent_NoColor", fn: newEncNwidger},
 		{name: "nwidger_Indent_NoColor", fn: newEncNwidger, indent: true},
-		{name: "nwidger_indent_NoIndent_Colo", fn: newEncNwidger, color: true},
-		{name: "nwidger_indent_Indent_Color", fn: newEncNwidger, indent: true, color: true},
+		{name: "nwidger_NoIndent_Color", fn: newEncNwidger, color: true},
+		{name: "nwidger_Indent_Color", fn: newEncNwidger, indent: true, color: true},
 	}
 
 	for _, bm := range benchmarks {
