@@ -249,22 +249,23 @@ they do not provide a stdlib-compatible `Encoder`.
 Apple M1 Max, Go 1.26.5, `-benchtime=2s -count=10`, summarized by
 [`benchstat`](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat). Rows are named by
 sub-benchmark, without the `Encode/` prefix and `-10` GOMAXPROCS suffix. Variation across the
-ten runs was within 2% on every row and is omitted.
+ten runs was within 2% on every row and is omitted. `vs stdlib` is the change in `sec/op`
+relative to the `encoding/json` row with the same indentation setting; negative is faster.
 
-| Benchmark | sec/op | B/op | allocs/op |
-|---|---:|---:|---:|
-| `stdlib_NoIndent` | 9.663m | 6.061Mi | 70.02k |
-| `stdlib_Indent` | 16.53m | 8.058Mi | 70.03k |
-| `segmentj_NoIndent` | 4.991m | 4.232Mi | 10.02k |
-| `segmentj_Indent` | 11.39m | 3.226Mi | 10.02k |
-| `neilotoole_NoIndent_NoColor` | 5.245m | 4.232Mi | 10.02k |
-| `neilotoole_Indent_NoColor` | 6.066m | 6.225Mi | 10.02k |
-| `neilotoole_NoIndent_Color` | 5.921m | 8.232Mi | 10.03k |
-| `neilotoole_Indent_Color` | 6.932m | 10.23Mi | 10.03k |
-| `nwidger_NoIndent_NoColor` | 102.5m | 55.08Mi | 2.270M |
-| `nwidger_Indent_NoColor` | 123.7m | 59.96Mi | 2.700M |
-| `nwidger_NoIndent_Color` | 103.8m | 55.08Mi | 2.270M |
-| `nwidger_Indent_Color` | 123.7m | 59.96Mi | 2.700M |
+| Benchmark | sec/op | vs stdlib | B/op | allocs/op |
+|---|---:|---:|---:|---:|
+| `stdlib_NoIndent` | 9.663m | — | 6.061Mi | 70.02k |
+| `stdlib_Indent` | 16.53m | — | 8.058Mi | 70.03k |
+| `segmentj_NoIndent` | 4.991m | −48.3% | 4.232Mi | 10.02k |
+| `segmentj_Indent` | 11.39m | −31.1% | 3.226Mi | 10.02k |
+| `neilotoole_NoIndent_NoColor` | 5.245m | −45.7% | 4.232Mi | 10.02k |
+| `neilotoole_Indent_NoColor` | 6.066m | −63.3% | 6.225Mi | 10.02k |
+| `neilotoole_NoIndent_Color` | 5.921m | −38.7% | 8.232Mi | 10.03k |
+| `neilotoole_Indent_Color` | 6.932m | −58.1% | 10.23Mi | 10.03k |
+| `nwidger_NoIndent_NoColor` | 102.5m | +960.7% | 55.08Mi | 2.270M |
+| `nwidger_Indent_NoColor` | 123.7m | +648.3% | 59.96Mi | 2.700M |
+| `nwidger_NoIndent_Color` | 103.8m | +974.2% | 55.08Mi | 2.270M |
+| `nwidger_Indent_Color` | 123.7m | +648.3% | 59.96Mi | 2.700M |
 
 What these particular results say:
 
