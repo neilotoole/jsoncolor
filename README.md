@@ -296,7 +296,7 @@ History: this package started as an extract of [`sq`](https://github.com/neiloto
 encoding package, which itself was a fork of the
 [`segmentio/encoding`](https://github.com/segmentio/encoding) JSON encoding package. Note that the
 original `sq` JSON encoder was forked from Segment's codebase at `v0.1.14`, so
-the codebases have drifted significantly by now.
+the codebases have diverged significantly by now.
 
 ### [v0.10.1](https://github.com/neilotoole/jsoncolor/releases/tag/v0.10.1)
 
