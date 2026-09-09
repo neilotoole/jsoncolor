@@ -168,10 +168,28 @@ func Indent(dst *bytes.Buffer, src []byte, prefix, indent string) error {
 
 // Marshal is documented at https://golang.org/pkg/encoding/json/#Marshal
 func Marshal(x interface{}) ([]byte, error) {
+	return marshalPooled(x, nil)
+}
+
+// MarshalIndent is documented at https://golang.org/pkg/encoding/json/#MarshalIndent
+//
+// Indentation is performed inline by the encoder, in the same single pass
+// as Encoder.SetIndent, rather than by marshaling compact output and
+// re-indenting it. The Indenter is constructed directly instead of via
+// NewIndenter so that an empty prefix and indent leave it enabled:
+// encoding/json.MarshalIndent still breaks lines in that case, whereas
+// Encoder.SetIndent("", "") disables indentation.
+func MarshalIndent(x interface{}, prefix, indent string) ([]byte, error) {
+	return marshalPooled(x, &Indenter{prefix: prefix, indent: indent})
+}
+
+// marshalPooled is the shared body of Marshal and MarshalIndent: encode x into a
+// pooled buffer with the package-level flags, then return a copy.
+func marshalPooled(x interface{}, indentr *Indenter) ([]byte, error) {
 	var err error
 	buf := encoderBufferPool.Get().(*encoderBuffer) //nolint:errcheck
 
-	if buf.data, err = Append(buf.data[:0], x, EscapeHTML|SortMapKeys, nil, nil); err != nil {
+	if buf.data, err = Append(buf.data[:0], x, EscapeHTML|SortMapKeys, nil, indentr); err != nil {
 		return nil, err
 	}
 
@@ -179,24 +197,6 @@ func Marshal(x interface{}) ([]byte, error) {
 	copy(b, buf.data)
 	encoderBufferPool.Put(buf)
 	return b, nil
-}
-
-// MarshalIndent is documented at https://golang.org/pkg/encoding/json/#MarshalIndent
-func MarshalIndent(x interface{}, prefix, indent string) ([]byte, error) {
-	b, err := Marshal(x)
-
-	if err == nil {
-		tmp := &bytes.Buffer{}
-		tmp.Grow(2 * len(b))
-
-		if err = Indent(tmp, b, prefix, indent); err != nil {
-			return b, err
-		}
-
-		b = tmp.Bytes()
-	}
-
-	return b, err
 }
 
 // Unmarshal is documented at https://golang.org/pkg/encoding/json/#Unmarshal

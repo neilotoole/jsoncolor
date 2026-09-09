@@ -249,3 +249,113 @@ func TestEncode_UnsortedMapErrorRollsBack(t *testing.T) {
 		}
 	}
 }
+
+// marshalIndentExtraValues supplements testValues and parityExtraValues
+// with the shapes where an inline indenter and a post-hoc re-indent are
+// most likely to disagree: empty containers, which must stay on one line,
+// and RawMessage payloads with irregular internal whitespace, which the
+// post-hoc pass normalizes and the inline pass must normalize identically.
+var marshalIndentExtraValues = []interface{}{
+	map[string]int{},
+	[]int{},
+	[]interface{}{},
+	map[string]interface{}{"e": map[string]int{}, "l": []int{}},
+	[]interface{}{map[string]int{}, []int{}, []interface{}{[]int{}}},
+	struct {
+		E map[string]int `json:"e"`
+		L []int          `json:"l"`
+	}{E: map[string]int{}, L: []int{}},
+	RawMessage(`{}`),
+	RawMessage(`[]`),
+	RawMessage(`{"x":  [1,2 ,{"y" :null}],"z" : {} , "w":[ ]}`),
+	struct {
+		A int        `json:"a"`
+		R RawMessage `json:"r"`
+	}{A: 1, R: RawMessage(`{"x": [1,2,{"y":null}], "z":{}}`)},
+	[]RawMessage{RawMessage(`1`), RawMessage(`{"a":{"b":[]}}`)},
+	map[string]RawMessage{"k": RawMessage(`[{"a":1},{"b":2}]`)},
+}
+
+// TestMarshalIndent_Parity asserts that MarshalIndent produces exactly
+// the bytes of the two-pass algorithm it replaced: Marshal followed by
+// Indent. That algorithm is kept here as the oracle rather than relied on
+// in the implementation, so the test pins the contract regardless of how
+// MarshalIndent is built.
+//
+// The ("", "") config is the one that matters most. encoding/json.Indent
+// still breaks lines when both prefix and indent are empty, so
+// MarshalIndent(v, "", "") is not compact output, unlike
+// Encoder.SetIndent("", ""), which disables indentation.
+//
+// Where jsoncolor.Marshal agrees with encoding/json.Marshal byte-for-byte,
+// the output is additionally checked against encoding/json.MarshalIndent.
+func TestMarshalIndent_Parity(t *testing.T) {
+	configs := []struct {
+		name           string
+		prefix, indent string
+	}{
+		{name: "2sp", prefix: "", indent: "  "},
+		{name: "tab", prefix: "", indent: "\t"},
+		{name: "prefix_2sp", prefix: "> ", indent: "  "},
+		{name: "prefix_only", prefix: "> ", indent: ""},
+		{name: "both_empty", prefix: "", indent: ""},
+		{name: "odd", prefix: "\t\t", indent: "x"},
+	}
+
+	values := append(append(testValues[:], parityExtraValues...), marshalIndentExtraValues...)
+
+	for _, cfg := range configs {
+		t.Run(cfg.name, func(t *testing.T) {
+			for _, v := range values {
+				t.Run(testName(v), func(t *testing.T) {
+					// Oracle: the two-pass algorithm.
+					var want []byte
+					compact, wantErr := Marshal(v)
+					if wantErr == nil {
+						tmp := &bytes.Buffer{}
+						if wantErr = Indent(tmp, compact, cfg.prefix, cfg.indent); wantErr == nil {
+							want = tmp.Bytes()
+						}
+					}
+
+					got, gotErr := MarshalIndent(v, cfg.prefix, cfg.indent)
+
+					if (wantErr == nil) != (gotErr == nil) {
+						t.Fatalf("error mismatch: want=%v got=%v", wantErr, gotErr)
+					}
+					if wantErr != nil {
+						if wantErr.Error() != gotErr.Error() {
+							t.Fatalf("error text mismatch: want=%v got=%v", wantErr, gotErr)
+						}
+						if got != nil {
+							t.Fatalf("expected nil bytes on error, got %q", got)
+						}
+						return
+					}
+
+					if !bytes.Equal(want, got) {
+						t.Errorf("byte mismatch against Marshal+Indent")
+						t.Logf("want (%d bytes): %q", len(want), string(want))
+						t.Logf("got  (%d bytes): %q", len(got), string(got))
+					}
+
+					// Cross-check against the standard library where the
+					// compact forms already agree.
+					stdCompact, stdErr := stdjson.Marshal(v)
+					if stdErr != nil || !bytes.Equal(stdCompact, compact) {
+						return
+					}
+					std, stdErr := stdjson.MarshalIndent(v, cfg.prefix, cfg.indent)
+					if stdErr != nil {
+						t.Fatalf("stdlib MarshalIndent: %v", stdErr)
+					}
+					if !bytes.Equal(std, got) {
+						t.Errorf("byte mismatch against encoding/json.MarshalIndent")
+						t.Logf("std (%d bytes): %q", len(std), string(std))
+						t.Logf("got (%d bytes): %q", len(got), string(got))
+					}
+				})
+			}
+		})
+	}
+}
