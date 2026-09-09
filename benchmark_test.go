@@ -258,3 +258,38 @@ func BenchmarkEncode_EmbeddedPointer(b *testing.B) {
 		}
 	}
 }
+
+// BenchmarkMarshalIndent measures MarshalIndent on the decoded
+// sakila_actor.json document and on a slice of synthetic records. Its
+// purpose is the before/after comparison for #77, where MarshalIndent
+// moved from a post-hoc re-indent to the inline Indenter.
+func BenchmarkMarshalIndent(b *testing.B) {
+	data, err := ioutil.ReadFile("testdata/sakila_actor.json")
+	if err != nil {
+		b.Fatal(err)
+	}
+	var doc interface{}
+	if err = stdj.Unmarshal(data, &doc); err != nil {
+		b.Fatal(err)
+	}
+	recs := makeRecords(b, 1000)
+
+	inputs := []struct {
+		name string
+		v    interface{}
+	}{
+		{name: "sakila_actor", v: doc},
+		{name: "records_1000", v: recs},
+	}
+
+	for _, in := range inputs {
+		b.Run(in.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				if _, err := jsoncolor.MarshalIndent(in.v, "", "  "); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}

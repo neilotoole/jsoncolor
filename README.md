@@ -202,12 +202,13 @@ A few things are worth knowing:
   [`Encoder.SetColors`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Encoder.SetColors),
   or by calling the low-level
   [`Append`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Append) with a `*Colors`.
-- `MarshalIndent` indents after the fact, by re-scanning the compact output, the same as
-  `encoding/json`. Inline indentation, the faster path, is what
-  [`Encoder.SetIndent`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Encoder.SetIndent)
-  does; `Append` gets it when passed an
-  [`Indenter`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Indenter), constructed with
-  [`NewIndenter`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#NewIndenter).
+- `MarshalIndent` indents inline, in the same single pass as
+  [`Encoder.SetIndent`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Encoder.SetIndent),
+  rather than re-scanning compact output as `encoding/json` does. `Append` gets the same when
+  passed an [`Indenter`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Indenter),
+  constructed with [`NewIndenter`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#NewIndenter).
+  One subtlety, inherited from `encoding/json`: `MarshalIndent(v, "", "")` still breaks
+  lines, whereas `Encoder.SetIndent("", "")` disables indentation.
 - [`Encoder.SetSortMapKeys`](https://pkg.go.dev/github.com/neilotoole/jsoncolor#Encoder.SetSortMapKeys)
   toggles map key sorting, which `encoding/json` always performs and which is on by default
   here too.
@@ -328,6 +329,12 @@ encoding package, which itself was a fork of the
 [`segmentio/encoding`](https://github.com/segmentio/encoding) JSON encoding package. Note that the
 original `sq` JSON encoder was forked from Segment's codebase at `v0.1.14`, so
 the codebases have drifted significantly by now.
+
+### [Unreleased](https://github.com/neilotoole/jsoncolor/compare/v0.10.0...HEAD)
+
+#### Changed
+
+- [#77](https://github.com/neilotoole/jsoncolor/issues/77): `MarshalIndent` now indents inline, using the same `Indenter` as `Encoder.SetIndent`, instead of marshaling compact and re-indenting the result with `Indent`. Output is byte-identical to before, including `MarshalIndent(v, "", "")`, which keeps `encoding/json`'s line-breaking behavior rather than the `Encoder`'s disable-on-empty rule; `TestMarshalIndent_Parity` pins it against the previous algorithm across the encode corpus. Measured with `BenchmarkMarshalIndent` on an Apple M1 Max under Go 1.26.5 (`-count=10`, benchstat): 59% faster on the decoded `sakila_actor.json` document and 50% faster on a slice of 1,000 synthetic records, allocating about half the bytes.
 
 ### [v0.10.0](https://github.com/neilotoole/jsoncolor/releases/tag/v0.10.0)
 
